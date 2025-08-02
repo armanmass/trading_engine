@@ -1,5 +1,6 @@
 #include "ringbuffer.h"
 #include <benchmark/benchmark.h>
+#include <cassert>
 #include <thread>
 
 static void BM_RingBuffer(benchmark::State& state) {
@@ -7,7 +8,7 @@ static void BM_RingBuffer(benchmark::State& state) {
 
     if (state.thread_index() == 0) 
     {
-        uint64_t x{};
+        int x{};
         for (auto _ : state) 
         {
             while (rb.full()) 
@@ -19,7 +20,9 @@ static void BM_RingBuffer(benchmark::State& state) {
     }
     else if (state.thread_index() == 1) 
     {
-        int value;
+        int value{};
+        int ev{};
+
         for (auto _ : state) 
         {
             while (rb.empty()) 
@@ -27,6 +30,8 @@ static void BM_RingBuffer(benchmark::State& state) {
                 std::this_thread::yield();
             }
             rb.pop(value);
+            ++ev;
+            //assert(value == ev && "Error wrong value Race Condition.");
         }
         state.SetItemsProcessed(state.iterations());
     }

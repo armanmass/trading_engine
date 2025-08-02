@@ -1,6 +1,8 @@
 #pragma once
+#include <atomic>
 #include <cstddef>
 #include <memory>
+#include <new>
 #include <utility>
 
 template <typename T, typename Allocator = std::allocator<T>>
@@ -40,9 +42,17 @@ class RingBuffer
 
     private:
         static constexpr size_t capacity_{ 1000 };
+        static constexpr size_t cache_line_size_{ 64 };
         T* ring_;
-        size_t push_cursor_{ };
-        size_t pop_cursor_{ };
+
+        alignas(cache_line_size_) std::atomic<size_t> push_cursor_{ };
+        char padding_push_[cache_line_size_ - sizeof(size_t)];
+
+        alignas(cache_line_size_) std::atomic<size_t> pop_cursor_{ };
+        char padding_pop_[cache_line_size_ - sizeof(size_t)];
+
+
+        static_assert(std::atomic<size_t>::is_always_lock_free);
         [[no_unique_address]] Allocator alloc_;
 
 };

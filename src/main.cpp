@@ -1,9 +1,10 @@
 // main server loop
 // goal implement with modules and c++ 23
-#include <print>
+#include <iostream>
+
 int main()
 {
-    std::println("Server loop running...");
+    std::cout << "Server loop running..." << std::endl;
 
     while (true)
     {
