@@ -2,7 +2,6 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
-#include <new>
 #include <utility>
 
 template <typename T, typename Allocator = std::allocator<T>>
@@ -20,36 +19,63 @@ class RingBuffer
             std::allocator_traits<Allocator>::deallocate(alloc_, ring_,capacity_);
         }
 
-        void pop(T& value)
+        // cant access full / empty externally now
+        // use return bool to notify thread of successful/failed operation
+        bool pop(T& value)
         {
-            if (!empty())
-                value = std::move(ring_[pop_cursor_++ % capacity_]);
+            // acquire relaxed cause i own it
+            auto popCursor = pop_cursor_.load(std::memory_order_relaxed);
+
+            if (empty(cached_push_cursor_, popCursor)) 
+            {
+                cached_push_cursor_ = push_cursor_.load(std::memory_order_acquire);
+                if (empty(cached_push_cursor_, popCursor))
+                    return false;
+            }
+
+            value = std::move(ring_[popCursor % capacity_]);
+            pop_cursor_.store(popCursor+1, std::memory_order_release);
+            return true;
         }
 
-        // can return shared ptr as well? more expensive?
-        // std::atomic_sharedptr?
         template <typename U>
-        void push(U&& value)
+        bool push(U&& value)
         {
-            if (full()) return;
-            new (&ring_[push_cursor_++ % capacity_]) T(std::forward<U>(value));
+            auto pushCursor= push_cursor_.load(std::memory_order_relaxed);
+
+            if (full(pushCursor, cached_pop_cursor_)) 
+            {
+                cached_pop_cursor_ = pop_cursor_.load(std::memory_order_acquire);
+                if (full(pushCursor, cached_pop_cursor_)) 
+                    return false;
+            }
+
+            new (&ring_[pushCursor % capacity_]) T(std::forward<U>(value));
+            push_cursor_.store(pushCursor+1, std::memory_order_release);
+            return true;
         }
 
-        [[nodiscard]] bool empty() const noexcept { return pop_cursor_ == push_cursor_; }
-        [[nodiscard]] size_t size() const noexcept { return push_cursor_-pop_cursor_; }
+
+        // capacity
+        [[nodiscard]] bool empty(size_t push, size_t pop) const noexcept { return push == pop; }
+        [[nodiscard]] size_t size(size_t push, size_t pop) const noexcept { return push-pop; }
         [[nodiscard]] size_t capacity() const noexcept { return capacity_; }
-        [[nodiscard]] bool full() const noexcept { return size() == capacity_; }
+        [[nodiscard]] bool full(size_t push, size_t pop) const noexcept { return (push-pop) == capacity_; }
 
     private:
+        // maybe dont lock capacity make it a ctor param so we can
+        // test what sizes are most offer best performance
         static constexpr size_t capacity_{ 1000 };
         static constexpr size_t cache_line_size_{ 64 };
         T* ring_;
 
+
         alignas(cache_line_size_) std::atomic<size_t> push_cursor_{ };
-        char padding_push_[cache_line_size_ - sizeof(size_t)];
+        alignas(cache_line_size_) size_t cached_push_cursor_{ };
 
         alignas(cache_line_size_) std::atomic<size_t> pop_cursor_{ };
-        char padding_pop_[cache_line_size_ - sizeof(size_t)];
+        alignas(cache_line_size_) size_t cached_pop_cursor_{ };
+        // char padding_pop_[cache_line_size_ - sizeof(size_t)];
 
 
         static_assert(std::atomic<size_t>::is_always_lock_free);
