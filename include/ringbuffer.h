@@ -15,8 +15,10 @@ class RingBuffer
 
         ~RingBuffer()
         {
-            std::destroy(ring_, ring_+capacity_);
-            std::allocator_traits<Allocator>::deallocate(alloc_, ring_,capacity_);
+            for (int i{pop_cursor_.load(std::memory_order_relaxed)}; i < push_cursor_.load(std::memory_order_relaxed); ++i)
+                ring_[i & mask_].~T();
+
+            delete[] ring_;
         }
 
         // cant access full / empty externally now
@@ -33,7 +35,10 @@ class RingBuffer
                     return false;
             }
 
-            value = std::move(ring_[popCursor % capacity_]);
+
+            value = std::move(ring_[popCursor & mask_]);
+            ring_[popCursor & mask_].~T();
+
             pop_cursor_.store(popCursor+1, std::memory_order_release);
             return true;
         }
@@ -50,7 +55,7 @@ class RingBuffer
                     return false;
             }
 
-            new (&ring_[pushCursor % capacity_]) T(std::forward<U>(value));
+            new (&ring_[pushCursor & mask_]) T(std::forward<U>(value));
             push_cursor_.store(pushCursor+1, std::memory_order_release);
             return true;
         }
@@ -65,7 +70,8 @@ class RingBuffer
     private:
         // maybe dont lock capacity make it a ctor param so we can
         // test what sizes are most offer best performance
-        static constexpr size_t capacity_{ 1000 };
+        static constexpr size_t capacity_{ 2 << 10 };
+        static constexpr size_t mask_{ capacity_-1 };
         static constexpr size_t cache_line_size_{ 64 };
         T* ring_;
 

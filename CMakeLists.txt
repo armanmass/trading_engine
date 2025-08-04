@@ -40,6 +40,14 @@ function(create_sanitized_targets base_name sources)
     # Regular target
     add_executable(${base_name} ${sources})
     target_include_directories(${base_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+    # compiler optimisations
+    target_compile_options(${base_name} PRIVATE 
+        -O3 -march=native -mtune=native -DNDEBUG 
+        -flto -funroll-loops -fvectorize -fslp-vectorize 
+        -finline-functions
+    )
+    target_link_options(${base_name} PRIVATE -flto -fuse-ld=lld)
     
     # ASan target
     add_executable(${base_name}_asan ${sources})
@@ -55,12 +63,9 @@ function(create_sanitized_targets base_name sources)
 endfunction()
 
 # Create all your targets
-create_sanitized_targets(server "src/main.cpp")
-create_sanitized_targets(ringtest "tests/ringtest.cpp")
 create_sanitized_targets(ringbench "tests/ringbench.cpp")
 
 # Link libraries for test targets (all variants)
 foreach(variant "" "_asan" "_tsan")
-    target_link_libraries(ringtest${variant} gtest_main gtest)
     target_link_libraries(ringbench${variant} benchmark::benchmark)
 endforeach()

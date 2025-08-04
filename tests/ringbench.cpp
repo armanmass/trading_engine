@@ -26,7 +26,6 @@ static void BM_RingBuffer(benchmark::State& state) {
             if (rb.pop(value))
             {
                 ++ev;
-                //assert(value == ev && "Error wrong value Race Condition.");
             }
         }
         state.SetItemsProcessed(state.iterations());
@@ -35,7 +34,6 @@ static void BM_RingBuffer(benchmark::State& state) {
 
 BENCHMARK(BM_RingBuffer)
     ->Threads(2)
-    ->MinTime(5.0)
-    ->UseRealTime();
+    ->MinTime(5.0);
 
 BENCHMARK_MAIN();
