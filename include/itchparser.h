@@ -1,8 +1,10 @@
 #pragma  once
 #include <fstream>
+#include <optional>
+#include <span>
 #include <stdexcept>
 #include <vector>
-#include "itch_msg.h"
+#include <algorithm>
 
 constexpr static size_t BUFFER_SIZE{ 64 * 1024 };
 
@@ -29,12 +31,25 @@ public:
     ITCHParser(ITCHParser&&) = delete;
     ITCHParser& operator=(ITCHParser&&) = delete;
 
-private:
-std::ifstream itch_file_;
-std::vector<std::byte> buffer_;
+    // 0 copy operation
+    [[nodiscard]] std::optional<std::span<const std::byte>> nextMsg();
+    [[nodiscard]] constexpr static size_t size() noexcept { return BUFFER_SIZE; }
 
-size_t buffer_pos_{};
-size_t buffer_end_{};
-size_t msg_count_{};
-size_t bytes_processed{};
+private:
+    size_t getMsgSize(const char msg_type) const;
+    bool fillBuffer();
+
+    constexpr static std::array<char, 3> SUPPORTED_TYPES{ 'A', 'X', 'U' };
+    bool isSupportedMsgType(const char msg_type) const noexcept
+    {
+        return std::find(SUPPORTED_TYPES.begin(), SUPPORTED_TYPES.end(), msg_type) != SUPPORTED_TYPES.end();
+    }
+
+    std::ifstream itch_file_;
+    std::vector<std::byte> buffer_;
+
+    size_t buffer_pos_{};
+    size_t buffer_end_{};
+    size_t msg_count_{};
+    size_t bytes_processed{};
 };

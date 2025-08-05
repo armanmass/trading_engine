@@ -77,5 +77,3 @@ namespace ITCH50
 
 #pragma pack(pop)
 }
-
-

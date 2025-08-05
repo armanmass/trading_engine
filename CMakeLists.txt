@@ -35,11 +35,34 @@ FetchContent_MakeAvailable(
     gtest
     gbench
 )
+
+file(GLOB_RECURSE HEADERS include/*.h)
+file(GLOB_RECURSE SOURCES src/*.cpp)
+
+add_library(
+    TradingEngineLib
+    ${HEADERS}
+    ${SOURCES}
+)
+
+target_include_directories(
+    TradingEngineLib
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(
+    TradingEngineLib
+    PUBLIC
+        benchmark::benchmark    
+)
+
 # generated tests
 function(create_sanitized_targets base_name sources)
-    # Regular target
+    # regular target
     add_executable(${base_name} ${sources})
-    target_include_directories(${base_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(${base_name} TradingEngineLib)
 
     # compiler optimisations
     target_compile_options(${base_name} PRIVATE 
@@ -51,21 +74,16 @@ function(create_sanitized_targets base_name sources)
     
     # ASan target
     add_executable(${base_name}_asan ${sources})
-    target_include_directories(${base_name}_asan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(${base_name}_asan TradingEngineLib)
     target_compile_options(${base_name}_asan PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
     target_link_options(${base_name}_asan PRIVATE -fsanitize=address)
     
     # TSan target
     add_executable(${base_name}_tsan ${sources})
-    target_include_directories(${base_name}_tsan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(${base_name}_tsan TradingEngineLib)
     target_compile_options(${base_name}_tsan PRIVATE -fsanitize=thread -fno-omit-frame-pointer -g)
     target_link_options(${base_name}_tsan PRIVATE -fsanitize=thread)
 endfunction()
 
-# Create all your targets
+# create targets
 create_sanitized_targets(ringbench "tests/ringbench.cpp")
-
-# Link libraries for test targets (all variants)
-foreach(variant "" "_asan" "_tsan")
-    target_link_libraries(ringbench${variant} benchmark::benchmark)
-endforeach()
