@@ -1,5 +1,4 @@
-# Trading Engine
-
+# Step 1: Implementing and optimizing SPSC FIFO
 ## No Atomics (Data Race)
     items_per_second=10.6608M/s
 
@@ -19,7 +18,7 @@
 ## atomic push_cursor_ and pop_cursor_ + cache alighnment + memory_ordering + cursor caching + increased buffer size (No Race)
     items_per_second=34.3127M/s
 
-## atomic push_cursor_ and pop_cursor_ + cache alighnment + memory_ordering + cursor caching + increased buffer size + compiler optimizations(No Race)
+## atomic push_cursor_ and pop_cursor_ + cache alighnment + memory_ordering + cursor caching + increased buffer size + compiler optimizations (No Race)
     items_per_second=218.212M/s
 
 
@@ -28,3 +27,5 @@ Takeaways:
 - Test different compilers
 - Test with controlled compiler options
 - Build pipe line permutating variables / compiler options
+
+# Step 2: NASDAQ ITCH Parser
