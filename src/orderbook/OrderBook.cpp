@@ -200,7 +200,7 @@ void OrderBook::cancelOrderInternal(OrderId orderId)
     if (!orders_.contains(orderId))
         return;
 
-    auto& [order, location] = orders_.at(orderId);
+    auto [order, location] = orders_.at(orderId);
 
     if (order->getSide() == Side::Buy)
     {

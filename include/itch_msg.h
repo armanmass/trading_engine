@@ -13,7 +13,7 @@ namespace ITCH50
         char MessageType;
         uint16_t StockLocation;
         uint16_t TrackingNumber;
-        uint64_t Timestamp;
+        std::byte Timestamp[6];
         uint64_t OrderID;
         char BuyOrSell;
         uint32_t Shares;
@@ -24,7 +24,6 @@ namespace ITCH50
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
-            Timestamp = bs(Timestamp);
             OrderID = bs(OrderID);
             Shares = bs(Shares);
             Price = bs(Price);
@@ -37,17 +36,14 @@ namespace ITCH50
         char MessageType;
         uint16_t StockLocation;
         uint16_t TrackingNumber;
-        uint64_t Timestamp;
+        std::byte Timestamp[6];
         uint64_t OrderID;
-        uint32_t CancelledShares;
 
         void convert_network_to_host()
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
-            Timestamp = bs(Timestamp);
             OrderID = bs(OrderID);
-            CancelledShares = bs(CancelledShares);
         }
     };
 
@@ -56,7 +52,7 @@ namespace ITCH50
         char MessageType;
         uint16_t StockLocation;
         uint16_t TrackingNumber;
-        uint64_t Timestamp;
+        std::byte Timestamp[6];
         uint64_t OldOrderID;
         uint64_t NewOrderID;
         uint32_t Shares;
@@ -66,7 +62,6 @@ namespace ITCH50
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
-            Timestamp = bs(Timestamp);
             OldOrderID = bs(OldOrderID);
             NewOrderID = bs(NewOrderID);
             Shares = bs(Shares);

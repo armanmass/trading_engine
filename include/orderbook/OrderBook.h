@@ -32,6 +32,7 @@ class OrderBook {
         OrderbookLevelInfos getOrderInfos() const;
 
         std::size_t size() const { return orders_.size(); }
+        auto getOrderEntry(OrderId orderId) { return &orders_[orderId]; }
 
     private:
         struct OrderEntry 

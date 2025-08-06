@@ -15,6 +15,8 @@ set(
     "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libstdc++"
 )
 
+set(CMAKE_BUILD_TYPE Debug)
+
 project(TradingEngine LANGUAGES CXX)
 
 include(FetchContent)
@@ -36,8 +38,9 @@ FetchContent_MakeAvailable(
     gbench
 )
 
-file(GLOB_RECURSE HEADERS include/*.h)
+file(GLOB_RECURSE HEADERS include/*.h include/*.hpp)
 file(GLOB_RECURSE SOURCES src/*.cpp)
+list(FILTER SOURCES EXCLUDE REGEX ".*main\\.cpp$")
 
 add_library(
     TradingEngineLib
@@ -49,8 +52,10 @@ target_include_directories(
     TradingEngineLib
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/orderbook
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/orderbook
 )
 target_link_libraries(
     TradingEngineLib
@@ -65,12 +70,15 @@ function(create_sanitized_targets base_name sources)
     target_link_libraries(${base_name} TradingEngineLib)
 
     # compiler optimisations
-    target_compile_options(${base_name} PRIVATE 
-        -O3 -march=native -mtune=native -DNDEBUG 
-        -flto -funroll-loops -fvectorize -fslp-vectorize 
-        -finline-functions
-    )
-    target_link_options(${base_name} PRIVATE -flto -fuse-ld=lld)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_options(${base_name} PRIVATE 
+            -O3 -march=native -mtune=native -DNDEBUG 
+            -flto -funroll-loops -fvectorize -fslp-vectorize 
+            -finline-functions
+        )
+        target_link_options(${base_name} PRIVATE -flto -fuse-ld=lld)
+    else()
+    endif()
     
     # ASan target
     add_executable(${base_name}_asan ${sources})
@@ -86,4 +94,5 @@ function(create_sanitized_targets base_name sources)
 endfunction()
 
 # create targets
-create_sanitized_targets(ringbench "tests/ringbench.cpp")
+# create_sanitized_targets(ringbench "tests/ringbench.cpp")
+create_sanitized_targets(TradingEngine "src/main.cpp")

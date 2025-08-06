@@ -39,7 +39,7 @@ private:
     size_t getMsgSize(const char msg_type) const;
     bool fillBuffer();
 
-    constexpr static std::array<char, 3> SUPPORTED_TYPES{ 'A', 'X', 'U' };
+    constexpr static std::array<char, 3> SUPPORTED_TYPES{ 'A', 'D', 'U' };
     bool isSupportedMsgType(const char msg_type) const noexcept
     {
         return std::find(SUPPORTED_TYPES.begin(), SUPPORTED_TYPES.end(), msg_type) != SUPPORTED_TYPES.end();

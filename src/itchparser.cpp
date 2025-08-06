@@ -1,30 +1,45 @@
 #include "itchparser.h"
+#include <optional>
+// #include <iostream>
 
 std::optional<std::span<const std::byte>>
 ITCHParser::nextMsg()
 {
-    if (buffer_pos_ == buffer_end_ && !fillBuffer())
-        return std::nullopt;
-
     while (true)
     {
-        const char msg_type = static_cast<char>(buffer_[buffer_pos_]);
-        const size_t msg_size = getMsgSize(msg_type);
+        if (buffer_pos_ == buffer_end_ && !fillBuffer())
+                return std::nullopt;
+        // skip null byte
+        if (++buffer_pos_ == buffer_end_ && !fillBuffer())
+                return std::nullopt;
+
+// std::cout << "msgSize: " << static_cast<int>(buffer_[buffer_pos_]) << std::endl;
+        // read size byte and increment
+        const size_t msgSize = static_cast<int>(buffer_[buffer_pos_++]);
+
+        // now pointing at msgtype byte
+        // if went off buffer we have to refill
+        if (buffer_pos_ == buffer_end_ && !fillBuffer())
+                return std::nullopt;
+        // read msgtype but don't advance since msgtype is included in msgsize
+// std::cout << "msgType: " << static_cast<char>(buffer_[buffer_pos_]) << std::endl;
+        const char msgType = static_cast<char>(buffer_[buffer_pos_]);
 
 
-        if ((buffer_pos_ + msg_size > buffer_end_) && !fillBuffer())
+        if ((buffer_pos_ + msgSize > buffer_end_) && !fillBuffer())
             return std::nullopt;
 
-        if (!isSupportedMsgType(msg_type))
+        if (!isSupportedMsgType(msgType))
         {
-            buffer_pos_ += msg_size;
+            buffer_pos_ += msgSize;
             continue;
         }
         
-        std::span<const std::byte> msg_span{ buffer_.data()+buffer_pos_, msg_size };
-        buffer_pos_ += msg_size;
-        return msg_span;
+        std::span<const std::byte> msgSpan{ buffer_.data()+buffer_pos_, msgSize };
+        buffer_pos_ += msgSize;
+        return msgSpan;
     }
+
     return std::nullopt;
 }
 
@@ -53,15 +68,15 @@ bool ITCHParser::fillBuffer()
     return itch_file_.good();
 }
 
-size_t ITCHParser::getMsgSize(char msg_type) const
+size_t ITCHParser::getMsgSize(char msgType) const
 {
-    switch (msg_type)
+    switch (msgType)
     {
     // supported message types add cancel modify
     case 'A':
         return 36;
-    case 'X':
-        return 23;
+    case 'D':
+        return 19;
     case 'U':
         return 35;
 
@@ -73,7 +88,7 @@ size_t ITCHParser::getMsgSize(char msg_type) const
         return 31;
     case 'C':
         return 36;
-    case 'D':
+    case 'X':
         return 19;
     case 'P':
         return 44;
@@ -108,6 +123,6 @@ size_t ITCHParser::getMsgSize(char msg_type) const
     case 'O':
         return 48;
     default:
-        throw std::logic_error("Unknown message type: " + std::string(1,msg_type) + "\n");
+        return 0;
     }
 }
