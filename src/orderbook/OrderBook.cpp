@@ -171,12 +171,11 @@ void OrderBook::pruneGoodForDayOrders()
 
         OrderIds orderIds;
 
+        
+        for (const auto& [orderId, entry] : orders_)
         {
-            for (const auto& [orderId, entry] : orders_)
-            {
-                if (entry.order_->getOrderType() == OrderType::GoodForDay)
-                    orderIds.push_back(orderId);
-            }
+            if (entry.order_->getOrderType() == OrderType::GoodForDay)
+                orderIds.push_back(orderId);
         }
 
         // cancelOrders(orderIds);
@@ -318,8 +317,8 @@ Trades OrderBook::matchOrders() {
         // parse lists base off temporal priority
         while (!lowestAsks.empty() && !highestBids.empty())
         {
-            auto& ask = lowestAsks.front();
-            auto& bid = highestBids.front();
+            auto ask = lowestAsks.front();
+            auto bid = highestBids.front();
 
             Quantity quantity = std::min(ask->getRemQuantity(),bid->getRemQuantity());
 
