@@ -13,7 +13,11 @@
 
 #include <cstddef>
 
+#include <iostream>
+
 class OrderBook {
+    private:
+        struct OrderEntry;
     public:
         OrderBook();
         ~OrderBook();
@@ -32,7 +36,12 @@ class OrderBook {
         OrderbookLevelInfos getOrderInfos() const;
 
         std::size_t size() const { return orders_.size(); }
-        auto getOrderEntry(OrderId orderId) { return &orders_[orderId]; }
+        OrderEntry* getOrderEntry(OrderId orderId) 
+        { 
+            if (!orders_.contains(orderId))
+                return nullptr; 
+            return &orders_[orderId]; 
+        }
 
     private:
         struct OrderEntry 

@@ -65,7 +65,7 @@ std::cout << "Producer thread running..." << std::endl;
         RawMessage rawMsg;
         std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
         rawMsg.size_ = itchMsg.size();
-std::cout << "Message type: " << static_cast<char>(rawMsg.data_.data()[0]) << " Message number: " << ++cnt << std::endl;
+// sd::cout << "Message type: " << static_cast<char>(rawMsg.data_.data()[0]) << " Message number: " << ++cnt << std::endl;
         while (!eventQueue.push(rawMsg))
             std::this_thread::yield();
     }
@@ -85,6 +85,8 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
         case 'A':
         {
             auto* addRaw= reinterpret_cast<ITCH50::AddOrderMsg*>(rawMsg.data_.data());
+            addRaw->convert_network_to_host();
+
             auto newOrder = std::make_shared<Order>(
                 OrderType::GoodTillCancel,
                 (OrderId)addRaw->OrderID,
@@ -92,18 +94,21 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
                 (Price)addRaw->Price,
                 (Quantity)addRaw->Shares
             );
+
             orderBook.addOrder(newOrder);
-            break;
         }
+            break;
         case 'D':
         {
             auto* delRaw = reinterpret_cast<ITCH50::CancelOrderMsg*>(rawMsg.data_.data());
+            delRaw->convert_network_to_host();
             orderBook.cancelOrder(delRaw->OrderID);
-            break;
         }
+            break;
         case 'U':
         {
             auto* modRaw = reinterpret_cast<ITCH50::ModifyOrderMsg*>(rawMsg.data_.data());
+            modRaw->convert_network_to_host();
             auto orderEntry = orderBook.getOrderEntry(modRaw->OldOrderID);
             if (orderEntry == nullptr)
                 break;
@@ -121,7 +126,9 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
 
             orderBook.addOrder(newOrder);
         }
+            break;
         default:
+        std::cout << "Received message type: " << msgType << std::endl;
             throw std::logic_error("Unsupported message type.");
     }
 }

@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <time.h>
 
+#include <iostream>
+
 OrderBook::OrderBook()
     : ordersPruneThread_( [this] { pruneGoodForDayOrders(); })
     { }
@@ -372,6 +374,17 @@ Trades OrderBook::matchOrders() {
         auto& order = bids.front();
         if (order->getOrderType() == OrderType::FillAndKill)
             cancelOrderInternal(order->getOrderID());
+    }
+    if (!trades.empty())
+    {
+        for (const auto& trade : trades)
+        {
+            auto askInfo = trade.getAskTrade();
+            auto bidInfo = trade.getBidTrade();
+std::cout << "Ask " << askInfo.orderId_ << " matched with Bid " << bidInfo.orderId_ << " for " \
+          << askInfo.quantity_ << " shares at $" << askInfo.price_/10000.0 << " each." << std::endl;
+        }
+
     }
 
     return trades;
