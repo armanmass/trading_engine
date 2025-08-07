@@ -1,5 +1,5 @@
 #
-![example](https://imgur.com/p98v3kw)
+![example](https://i.imgur.com/p98v3kw.gif)
 
 # Step 1: Implementing and optimizing SPSC FIFO
 ## No Atomics (Data Race)
