@@ -1,4 +1,4 @@
-#
+# Example
 ![example](https://i.imgur.com/p98v3kw.gif)
 
 # Step 1: Implementing and optimizing SPSC FIFO
@@ -32,3 +32,4 @@ Takeaways:
 - Build pipe line permutating variables / compiler options
 
 # Step 2: NASDAQ ITCH Parser
+Following [Nasdaq ITCH 5.0 Specification](https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/NQTVITCHSpecification.pdf) I code parse raw ITCH binary stream. I couldn't find any free ITCH data so I queried an LLM. Funnily it found a hidden subdomain that doesn't show up on any regular searches. [emi.nasdaq.com](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/) where I manged to download 8GB of ITCH data for free.
