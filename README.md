@@ -1,3 +1,6 @@
+#
+![example](https://imgur.com/p98v3kw)
+
 # Step 1: Implementing and optimizing SPSC FIFO
 ## No Atomics (Data Race)
     items_per_second=10.6608M/s
