@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/armin/trading_engine/build/Debug/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

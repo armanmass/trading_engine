@@ -1,10 +1,9 @@
 #pragma  once
 #include <fstream>
-#include <optional>
-#include <span>
 #include <stdexcept>
 #include <vector>
-#include <algorithm>
+#include <optional>
+#include <span>
 
 constexpr static size_t BUFFER_SIZE{ 64 * 1024 };
 
@@ -36,11 +35,10 @@ public:
     [[nodiscard]] constexpr static size_t size() noexcept { return BUFFER_SIZE; }
 
 private:
-    size_t getMsgSize(const char msg_type) const;
-    bool fillBuffer();
-
     constexpr static std::array<char, 3> SUPPORTED_TYPES{ 'A', 'D', 'U' };
-    bool isSupportedMsgType(const char msg_type) const noexcept
+
+    [[nodiscard]] bool fillBuffer();
+    [[nodiscard]] bool isSupportedMsgType(const char msg_type) const noexcept
     {
         return std::find(SUPPORTED_TYPES.begin(), SUPPORTED_TYPES.end(), msg_type) != SUPPORTED_TYPES.end();
     }

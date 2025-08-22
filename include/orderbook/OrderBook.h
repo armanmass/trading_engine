@@ -7,13 +7,12 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <thread>
 
 #include <map>
 #include <unordered_map>
 
 #include <cstddef>
-
-#include <iostream>
 
 class OrderBook {
     private:

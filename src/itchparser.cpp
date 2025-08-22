@@ -1,6 +1,4 @@
 #include "itchparser.h"
-#include <optional>
-// #include <iostream>
 
 std::optional<std::span<const std::byte>>
 ITCHParser::nextMsg()
@@ -66,63 +64,4 @@ bool ITCHParser::fillBuffer()
     buffer_end_ = unread_bytes + itch_file_.gcount();
 
     return itch_file_.good();
-}
-
-size_t ITCHParser::getMsgSize(char msgType) const
-{
-    switch (msgType)
-    {
-    // supported message types add cancel modify
-    case 'A':
-        return 36;
-    case 'D':
-        return 19;
-    case 'U':
-        return 35;
-
-    // unsupported message types
-    // kept for knowing how many bytes to skip in input stream
-    case 'F':
-        return 40;
-    case 'E':
-        return 31;
-    case 'C':
-        return 36;
-    case 'X':
-        return 19;
-    case 'P':
-        return 44;
-    case 'Q':
-        return 40;
-    case 'B':
-        return 19;
-    case 'S':
-        return 12;
-    case 'R':
-        return 39;
-    case 'H':
-        return 25;
-    case 'Y':
-        return 20;
-    case 'L':
-        return 26;
-    case 'V':
-        return 35;
-    case 'W':
-        return 12;
-    case 'K':
-        return 28;
-    case 'J':
-        return 35;
-    case 'h':
-        return 21;
-    case 'I':
-        return 50;
-    case 'N':
-        return 20;
-    case 'O':
-        return 48;
-    default:
-        return 0;
-    }
 }

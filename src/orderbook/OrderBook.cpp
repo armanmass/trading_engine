@@ -1,13 +1,7 @@
 #include "OrderBook.h"
 #include "Order.h"
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <numeric>
-#include <stdexcept>
-#include <time.h>
 
+#include <numeric>
 #include <iostream>
 
 OrderBook::OrderBook()
@@ -310,8 +304,10 @@ Trades OrderBook::matchOrders() {
             break;
 
         // get lists based off price priority
-        auto& [askPrice, lowestAsks] = *asks_.begin();
-        auto& [bidPrice, highestBids] = *bids_.begin();
+        const Price askPrice = asks_.begin()->first;
+        auto& lowestAsks = asks_.begin()->second;
+        const Price bidPrice = bids_.begin()->first;
+        auto& highestBids = bids_.begin()->second;
 
         if (askPrice > bidPrice)
             break;

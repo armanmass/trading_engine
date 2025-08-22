@@ -1,0 +1,20 @@
+[
+{
+  "directory": "/home/armin/trading_engine/build/Debug",
+  "command": "/usr/bin/clang++-20  -I/home/armin/trading_engine/include -I/home/armin/trading_engine/include/orderbook -I/home/armin/trading_engine/src -I/home/armin/trading_engine/src/orderbook -m64 -stdlib=libc++ -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wdouble-promotion -fsanitize=address -fsanitize=leak -O1 -g -fno-omit-frame-pointer -g -std=c++23 -o CMakeFiles/TradingEngineLib.dir/src/itchparser.cpp.o -c /home/armin/trading_engine/src/itchparser.cpp",
+  "file": "/home/armin/trading_engine/src/itchparser.cpp",
+  "output": "CMakeFiles/TradingEngineLib.dir/src/itchparser.cpp.o"
+},
+{
+  "directory": "/home/armin/trading_engine/build/Debug",
+  "command": "/usr/bin/clang++-20  -I/home/armin/trading_engine/include -I/home/armin/trading_engine/include/orderbook -I/home/armin/trading_engine/src -I/home/armin/trading_engine/src/orderbook -m64 -stdlib=libc++ -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wdouble-promotion -fsanitize=address -fsanitize=leak -O1 -g -fno-omit-frame-pointer -g -std=c++23 -o CMakeFiles/TradingEngineLib.dir/src/orderbook/OrderBook.cpp.o -c /home/armin/trading_engine/src/orderbook/OrderBook.cpp",
+  "file": "/home/armin/trading_engine/src/orderbook/OrderBook.cpp",
+  "output": "CMakeFiles/TradingEngineLib.dir/src/orderbook/OrderBook.cpp.o"
+},
+{
+  "directory": "/home/armin/trading_engine/build/Debug",
+  "command": "/usr/bin/clang++-20  -I/home/armin/trading_engine/include -I/home/armin/trading_engine/include/orderbook -m64 -stdlib=libc++ -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wdouble-promotion -fsanitize=address -fsanitize=leak -O1 -g -fno-omit-frame-pointer -g -std=c++23 -o CMakeFiles/TradingEngine.dir/src/main.cpp.o -c /home/armin/trading_engine/src/main.cpp",
+  "file": "/home/armin/trading_engine/src/main.cpp",
+  "output": "CMakeFiles/TradingEngine.dir/src/main.cpp.o"
+}
+]

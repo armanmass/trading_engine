@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-20 qc libTradingEngineLib.a CMakeFiles/TradingEngineLib.dir/src/itchparser.cpp.o CMakeFiles/TradingEngineLib.dir/src/orderbook/OrderBook.cpp.o
+/usr/bin/llvm-ranlib-20 libTradingEngineLib.a
