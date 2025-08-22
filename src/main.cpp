@@ -57,14 +57,13 @@ std::cout << "Producer thread running..." << std::endl;
     };
 
     // exits loop if nextMsg returns std::nullopt
-    size_t cnt{};
     while (auto optionalMsgSpan = itchParser.nextMsg())
     {
         std::span<const std::byte> itchMsg = optionalMsgSpan.value();
 
         RawMessage rawMsg;
         std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
-        rawMsg.size_ = itchMsg.size();
+        rawMsg.size_ = static_cast<decltype(RawMessage::size_)>(itchMsg.size());
 // sd::cout << "Message type: " << static_cast<char>(rawMsg.data_.data()[0]) << " Message number: " << ++cnt << std::endl;
         while (!eventQueue.push(rawMsg))
             std::this_thread::yield();

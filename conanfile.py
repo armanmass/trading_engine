@@ -15,9 +15,8 @@ class SetUp(ConanFile):
             # ENABLE ALL WARNINGS
             warning_flags = [
                 "-Wall", "-Wextra", "-Wpedantic", "-Wshadow", "-Wnon-virtual-dtor",
-                "-Wold-style-cast", "-Wcast-align", "-Wunused", "-Woverloaded-virtual",
-                "-Wconversion", "-Wsign-conversion", "-Wmisleading-indentation",
-                "-Wdouble-promotion",
+                "-Wcast-align", "-Wunused", "-Woverloaded-virtual","-Wdouble-promotion",
+                "-Wconversion", "-Wmisleading-indentation",
             ]
 
             # SELECT SANITIZER

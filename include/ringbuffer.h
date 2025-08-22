@@ -73,6 +73,8 @@ class RingBuffer
         static constexpr size_t capacity_{ 2 << 12 };
         static constexpr size_t mask_{ capacity_-1 };
         static constexpr size_t cache_line_size_{ 64 };
+
+        [[no_unique_address]] Allocator alloc_;
         T* ring_;
 
 
@@ -81,10 +83,7 @@ class RingBuffer
 
         alignas(cache_line_size_) std::atomic<size_t> pop_cursor_{ };
         alignas(cache_line_size_) size_t cached_pop_cursor_{ };
-        // char padding_pop_[cache_line_size_ - sizeof(size_t)];
-
 
         static_assert(std::atomic<size_t>::is_always_lock_free);
-        [[no_unique_address]] Allocator alloc_;
 
 };

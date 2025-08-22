@@ -45,9 +45,8 @@ private:
 
     std::ifstream itch_file_;
     std::vector<std::byte> buffer_;
+    using buffer_diff_t = decltype(buffer_)::iterator::difference_type;
 
     size_t buffer_pos_{};
     size_t buffer_end_{};
-    size_t msg_count_{};
-    size_t bytes_processed{};
 };

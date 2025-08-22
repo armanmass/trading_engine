@@ -19,7 +19,7 @@ class OrderbookLevelInfos {
         const LevelInfos& getBids() const { return bids_; };
 
     private:
-        LevelInfos bids_;
         LevelInfos asks_;
+        LevelInfos bids_;
 
 };

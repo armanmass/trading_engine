@@ -62,13 +62,13 @@ bool OrderBook::addOrderCoreLogic(OrderPointer order)
     {
         auto& bidsAtPrice = bids_[order->getPrice()];
         bidsAtPrice.push_back(order);
-        it = std::next(bidsAtPrice.begin(), bidsAtPrice.size() - 1);
+        it = std::prev(bidsAtPrice.end());
     }
     else
     {
         auto& asksAtPrice = asks_[order->getPrice()];
         asksAtPrice.push_back(order);
-        it = std::next(asksAtPrice.begin(), asksAtPrice.size() - 1);
+        it = std::prev(asksAtPrice.end());
     }
 
     orders_[order->getOrderID()] = OrderEntry { order, it };
