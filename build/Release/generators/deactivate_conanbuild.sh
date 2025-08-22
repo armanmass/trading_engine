@@ -1,1 +1,0 @@
-. "/home/armin/trading_engine/build/Release/generators/deactivate_conanbuildenv-release-x86_64.sh"

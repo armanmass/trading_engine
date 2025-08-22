@@ -1,1 +1,0 @@
-/usr/bin/clang++-20 -m64 -stdlib=libc++ -O3 -DNDEBUG -march=native -O3 -DNDEBUG -m64 -Xlinker --dependency-file=CMakeFiles/TradingEngine.dir/link.d CMakeFiles/TradingEngine.dir/src/main.cpp.o -o TradingEngine  libTradingEngineLib.a

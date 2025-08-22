@@ -1,4 +1,0 @@
-/home/armin/trading_engine/build/Debug/CMakeFiles/TradingEngineLib.dir
-/home/armin/trading_engine/build/Debug/CMakeFiles/TradingEngine.dir
-/home/armin/trading_engine/build/Debug/CMakeFiles/edit_cache.dir
-/home/armin/trading_engine/build/Debug/CMakeFiles/rebuild_cache.dir
