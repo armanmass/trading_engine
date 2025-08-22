@@ -56,7 +56,8 @@ bool ITCHParser::fillBuffer()
     
     size_t unread_bytes = buffer_end_ - buffer_pos_;
     std::move(buffer_.begin()+static_cast<buffer_diff_t>(buffer_pos_), 
-              buffer_.begin()+static_cast<buffer_diff_t>(buffer_end_), buffer_.begin());
+              buffer_.begin()+static_cast<buffer_diff_t>(buffer_end_), 
+              buffer_.begin());
 
     size_t to_read_bytes = size() - unread_bytes;
     itch_file_.read(reinterpret_cast<char*>(buffer_.data() + unread_bytes), to_read_bytes);

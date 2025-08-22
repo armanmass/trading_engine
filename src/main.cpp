@@ -12,9 +12,55 @@
 #include <thread>
 #include <atomic>
 
-void submit_order(OrderBook& orderBook, RawMessage& rawMsg);
+void submitOrder(OrderBook& orderBook, RawMessage& rawMsg);
+void consumerWorker(OrderBook& orderBook, RingBuffer<RawMessage>& eventQueue, 
+                     std::atomic<bool>& producerDone);
 
-void consumer_worker(
+int main(int argc, char** argv)
+{
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <itch_file path>" << std::endl;
+        return -1;
+    }
+
+std::cout << "Producer thread running..." << std::endl;
+
+    std::string itchFilePath = argv[1];
+    ITCHParser itchParser(itchFilePath);
+
+    OrderBook orderBook;
+    RingBuffer<RawMessage> eventQueue;
+
+    std::atomic<bool> producerDone{ false };
+
+    std::thread Consumer{
+        consumerWorker, std::ref(orderBook), std::ref(eventQueue), std::ref(producerDone)
+    };
+
+    // exits loop if nextMsg returns std::nullopt
+    while (auto optionalMsgSpan = itchParser.nextMsg())
+    {
+        std::span<const std::byte> itchMsg = optionalMsgSpan.value();
+
+        RawMessage rawMsg;
+        std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
+        rawMsg.size_ = static_cast<decltype(RawMessage::size_)>(itchMsg.size());
+
+        while (!eventQueue.push(rawMsg))
+            std::this_thread::yield();
+    }
+
+    producerDone.store(true, std::memory_order_release);
+    Consumer.join();
+
+    return 0;
+}
+
+
+
+
+void consumerWorker(
     OrderBook& orderBook,
     RingBuffer<RawMessage>& eventQueue,
     std::atomic<bool>& producerDone
@@ -26,7 +72,7 @@ std::cout << "Consumer thread running..." << std::endl;
     {
         if (eventQueue.pop(rawMsg))
         {
-            submit_order(orderBook, rawMsg);
+            submitOrder(orderBook, rawMsg);
         }
         else
         {
@@ -37,48 +83,12 @@ std::cout << "Consumer thread running..." << std::endl;
     }
 }
 
-int main(int argc, char** argv)
-{
-    if (argc < 2)
-    {
-        std::cerr << "Usage: " << argv[0] << " <itch_file path>" << std::endl;
-        return -1;
-    }
-std::cout << "Producer thread running..." << std::endl;
 
-    std::string itchFilePath = argv[1];
-    ITCHParser itchParser(itchFilePath);
-    OrderBook orderBook;
-    RingBuffer<RawMessage> eventQueue;
-    std::atomic<bool> producerDone{ false };
-
-    std::thread Consumer{
-        consumer_worker, std::ref(orderBook), std::ref(eventQueue), std::ref(producerDone)
-    };
-
-    // exits loop if nextMsg returns std::nullopt
-    while (auto optionalMsgSpan = itchParser.nextMsg())
-    {
-        std::span<const std::byte> itchMsg = optionalMsgSpan.value();
-
-        RawMessage rawMsg;
-        std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
-        rawMsg.size_ = static_cast<decltype(RawMessage::size_)>(itchMsg.size());
-// sd::cout << "Message type: " << static_cast<char>(rawMsg.data_.data()[0]) << " Message number: " << ++cnt << std::endl;
-        while (!eventQueue.push(rawMsg))
-            std::this_thread::yield();
-    }
-
-    producerDone.store(true, std::memory_order_release);
-    Consumer.join();
-
-    return 0;
-}
-
-void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
+void submitOrder(OrderBook& orderBook, RawMessage& rawMsg)
 {
     const auto msgType = static_cast<char>(rawMsg.data_[0]);
-    // A add D cancel U update/modify (cancel old order id/add new order)
+
+    // A add D cancel U update/modify
     switch (msgType) 
     {
         case 'A':
@@ -97,6 +107,7 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
             orderBook.addOrder(newOrder);
         }
             break;
+
         case 'D':
         {
             auto* delRaw = reinterpret_cast<ITCH50::CancelOrderMsg*>(rawMsg.data_.data());
@@ -104,6 +115,7 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
             orderBook.cancelOrder(delRaw->OrderID);
         }
             break;
+
         case 'U':
         {
             auto* modRaw = reinterpret_cast<ITCH50::ModifyOrderMsg*>(rawMsg.data_.data());
@@ -126,6 +138,7 @@ void submit_order(OrderBook& orderBook, RawMessage& rawMsg)
             orderBook.addOrder(newOrder);
         }
             break;
+
         default:
         std::cout << "Received message type: " << msgType << std::endl;
             throw std::logic_error("Unsupported message type.");
