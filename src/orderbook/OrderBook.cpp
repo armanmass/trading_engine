@@ -8,12 +8,18 @@ OrderBook::OrderBook()
     : ordersPruneThread_( [this] { pruneGoodForDayOrders(); })
     { }
 
+OrderBook::OrderBook(std::string&& instrument)
+    : instrument_(instrument),
+      ordersPruneThread_( [this] { pruneGoodForDayOrders(); })
+    { }
+
 OrderBook::~OrderBook()
 {
     shutdown_.store(true, std::memory_order_release);
     shutdownConditionVariable_.notify_one();
     ordersPruneThread_.join();
 }
+
 
 Trades OrderBook::addOrder(OrderPointer order)
 {
@@ -26,6 +32,7 @@ Trades OrderBook::addOrder(OrderPointer order)
 
     return matchOrders();
 }
+
 
 bool OrderBook::addOrderCoreLogic(OrderPointer order)
 {
@@ -107,6 +114,7 @@ Trades OrderBook::modifyOrder(OrderModify modifiedOrder)
     return matchOrders();
 }
 
+
 OrderbookLevelInfos OrderBook::getOrderInfos() const
 {
     LevelInfos asks;
@@ -131,6 +139,7 @@ OrderbookLevelInfos OrderBook::getOrderInfos() const
 
     return OrderbookLevelInfos{asks, bids};
 }
+
 
 void OrderBook::pruneGoodForDayOrders()
 {
@@ -182,6 +191,7 @@ void OrderBook::pruneGoodForDayOrders()
     }
 }
 
+
 void OrderBook::cancelOrders(OrderIds orderIds)
 {
     std::scoped_lock ordersLock{ ordersMutex_ };
@@ -189,6 +199,7 @@ void OrderBook::cancelOrders(OrderIds orderIds)
     for (const auto& orderId : orderIds)
         cancelOrderInternal(orderId);
 }
+
 
 void OrderBook::cancelOrderInternal(OrderId orderId)
 {
@@ -216,6 +227,7 @@ void OrderBook::cancelOrderInternal(OrderId orderId)
     onOrderCancelled(order);
 }
 
+
 void OrderBook::onOrderAdded(OrderPointer order)
 {
     updateLevelData(order->getPrice(), order->getRemQuantity(), LevelData::Action::Add);
@@ -229,6 +241,7 @@ void OrderBook::onOrderMatched(Price price, Quantity quantity, bool isFullyFille
 {
     updateLevelData(price, quantity, isFullyFilled ? LevelData::Action::Remove : LevelData::Action::Match);
 }
+
 
 void OrderBook::updateLevelData(Price price, Quantity quantity, LevelData::Action action)
 {
@@ -268,6 +281,7 @@ bool OrderBook::hasMatch(Side side, Price price) const {
     }
     return false;
 }
+
 
 bool OrderBook::canFullyFill(Side side, Price price, Quantity quantity) const
 {
@@ -377,7 +391,7 @@ Trades OrderBook::matchOrders() {
         {
             auto askInfo = trade.getAskTrade();
             auto bidInfo = trade.getBidTrade();
-std::cout << "Ask " << askInfo.orderId_ << " matched with Bid " << bidInfo.orderId_ << " for " \
+std::cout << instrument_ << ": " << "Ask " << askInfo.orderId_ << " matched with Bid " << bidInfo.orderId_ << " for " \
           << askInfo.quantity_ << " shares at $" << askInfo.price_/10000.0 << " each." << std::endl;
         }
 

@@ -19,6 +19,7 @@ class OrderBook {
         struct OrderEntry;
     public:
         OrderBook();
+        OrderBook(std::string&& instrument);
         ~OrderBook();
 
         OrderBook(const OrderBook&)       = delete;
@@ -72,6 +73,7 @@ class OrderBook {
         void onOrderMatched(Price price, Quantity quantity, bool isFullyFilled);
         void updateLevelData(Price price, Quantity quantity, LevelData::Action action);
 
+        std::string instrument_;
 
         std::unordered_map<Price, LevelData> data_;
 

@@ -1,6 +1,9 @@
 #pragma once
 #include <bit>
+#include <cstddef>
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 template <typename T>
 constexpr T bs(T value) { return std::byteswap(value); }
@@ -20,13 +23,20 @@ namespace ITCH50
         char Stock[8];
         uint32_t Price;
 
-        void convert_network_to_host()
+        void convertNetworkToHost()
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
             OrderID = bs(OrderID);
             Shares = bs(Shares);
             Price = bs(Price);
+        }
+
+        std::string getInstrumentName()
+        {
+            std::string_view instrument(Stock, sizeof(Stock));
+            auto end = instrument.find_last_not_of(' ');
+            return std::string(instrument.substr(0,end+1));
         }
     };
 
@@ -39,7 +49,7 @@ namespace ITCH50
         std::byte Timestamp[6];
         uint64_t OrderID;
 
-        void convert_network_to_host()
+        void convertNetworkToHost()
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
@@ -58,7 +68,7 @@ namespace ITCH50
         uint32_t Shares;
         uint32_t Price;
 
-        void convert_network_to_host()
+        void convertNetworkToHost()
         {
             StockLocation = bs(StockLocation);
             TrackingNumber = bs(TrackingNumber);
