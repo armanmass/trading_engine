@@ -4,6 +4,8 @@
 #include <vector>
 #include <optional>
 #include <span>
+#include <algorithm>
+#include <array>
 
 constexpr static size_t BUFFER_SIZE{ 64 * 1024 };
 

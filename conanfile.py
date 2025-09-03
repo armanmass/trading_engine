@@ -4,8 +4,8 @@ from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 
 class SetUp(ConanFile):
     settings = "os", "arch", "compiler", "build_type"
-    options = { "sanitizer": ["none", "asan", "tsan", "msan", "ubsan"] }
-    default_options = { "sanitizer": "none" }
+    options = { "sanitizer": ["asan", "tsan", "msan", "ubsan"] }
+    default_options = { "sanitizer": "asan" }
 
     def configure(self):
         # DEBUG
@@ -52,18 +52,21 @@ class SetUp(ConanFile):
                 self.conf.define("tools.build:cflags", release_flags)
     
     def requirements(self):
-        self.requires("gtest/1.16.0")
+        self.requires("gtest/1.17.0")
         self.requires("benchmark/1.9.4")
     
     def generate(self):
+        cmake = CMakeToolchain(self)
+        cmake.generator = "Ninja"
+
+        if self.settings.compiler.cppstd:
+            cmake.variables["CMAKE_CXX_STANDARD"] = str(self.settings.compiler.cppstd)
+            cmake.variables["CMAKE_CXX_STANDARD_REQUIRED"] = "ON"
+        cmake.generate()
+
         deps = CMakeDeps(self)
         deps.generate()
         
-        tc = CMakeToolchain(self)
-        if self.settings.compiler.cppstd:
-            tc.variables["CMAKE_CXX_STANDARD"] = str(self.settings.compiler.cppstd)
-            tc.variables["CMAKE_CXX_STANDARD_REQUIRED"] = "ON"
-        tc.generate()
 
     def layout(self):
         cmake_layout(self)

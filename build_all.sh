@@ -4,16 +4,16 @@ set -e
 
 # Release build
 echo "Building Release..."
-conan install .
+conan install . --build=missing
 cmake --preset conan-release
 cmake --build --preset conan-release
 
 # Debug builds with different sanitizers
-sanitizers=("asan" "tsan" "msan" "none")
+sanitizers=("asan" "tsan" "msan" "ubsan")
 
 for sanitizer in "${sanitizers[@]}"; do
    echo "Building Debug with $sanitizer..."
-   conan install . --settings=build_type=Debug --options=sanitizer="$sanitizer"
+   conan install . --build=missing --settings=build_type=Debug --options=sanitizer="$sanitizer"
    cmake --preset conan-debug
    cmake --build --preset conan-debug
    

@@ -1,27 +1,21 @@
 cmake_minimum_required(VERSION 4.1)
-project(TradingEngine LANGUAGES CXX)
+project(TradingEngine)
 
 find_package(GTest REQUIRED)
 find_package(benchmark REQUIRED)
 
-file(GLOB_RECURSE HEADERS include/*.h include/*.hpp)
-file(GLOB_RECURSE SOURCES src/*.cpp)
-list(FILTER SOURCES EXCLUDE REGEX ".*main\\.cpp$")
-
 add_library(
-    TradingEngineLib
-    ${HEADERS}
-    ${SOURCES}
+    TradingEngineLib 
+    STATIC
+        src/itchparser.cpp
+        src/orderbook/OrderBook.cpp
 )
 
 target_include_directories(
     TradingEngineLib
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/orderbook
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/orderbook
+        include
+        include/orderbook
 )
 
 add_executable(
@@ -32,5 +26,5 @@ add_executable(
 target_link_libraries(
     TradingEngine
     PRIVATE
-        TradingEngineLib    
+        TradingEngineLib
 )

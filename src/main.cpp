@@ -7,6 +7,7 @@
 #include "itchparser.h"
 #include "itch_msg.h"
 
+#include <cstring>
 #include <iostream>
 
 void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks, 
