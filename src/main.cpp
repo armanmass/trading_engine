@@ -1,20 +1,23 @@
-#include "Order.h"
 #include "OrderBook.h"
-#include "itch_msg.h"
-#include "itchparser.h"
+#include "OrderDirectory.h"
+
 #include "ringbuffer.h"
 #include "rawmessage.h"
 
+#include "itchparser.h"
+#include "itch_msg.h"
+
 #include <cstring>
 #include <iostream>
-#include <memory>
-#include <stdexcept>
-#include <thread>
-#include <atomic>
 
-void submitOrder(OrderBook& orderBook, RawMessage& rawMsg);
-void consumerWorker(OrderBook& orderBook, RingBuffer<RawMessage>& eventQueue, 
-                     std::atomic<bool>& producerDone);
+void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks, 
+                 OrderDirectory& orderDirectory,
+                 RawMessage& rawMsg);
+
+void consumerWorker(std::unordered_map<std::string, OrderBook>& orderBooks, 
+                    OrderDirectory& orderDirectory,
+                    RingBuffer<RawMessage>& eventQueue, 
+                    std::atomic<bool>& producerDone);
 
 int main(int argc, char** argv)
 {
@@ -29,13 +32,15 @@ std::cout << "Producer thread running..." << std::endl;
     std::string itchFilePath = argv[1];
     ITCHParser itchParser(itchFilePath);
 
-    OrderBook orderBook;
+    std::unordered_map<std::string, OrderBook> orderBooks;
+    OrderDirectory orderDirectory;
     RingBuffer<RawMessage> eventQueue;
 
     std::atomic<bool> producerDone{ false };
 
-    std::thread Consumer{
-        consumerWorker, std::ref(orderBook), std::ref(eventQueue), std::ref(producerDone)
+    std::jthread Consumer{
+        consumerWorker, std::ref(orderBooks), std::ref(orderDirectory),
+        std::ref(eventQueue), std::ref(producerDone)
     };
 
     // exits loop if nextMsg returns std::nullopt
@@ -52,7 +57,6 @@ std::cout << "Producer thread running..." << std::endl;
     }
 
     producerDone.store(true, std::memory_order_release);
-    Consumer.join();
 
     return 0;
 }
@@ -61,7 +65,8 @@ std::cout << "Producer thread running..." << std::endl;
 
 
 void consumerWorker(
-    OrderBook& orderBook,
+    std::unordered_map<std::string, OrderBook>& orderBooks,
+    OrderDirectory& orderDirectory,
     RingBuffer<RawMessage>& eventQueue,
     std::atomic<bool>& producerDone
 )
@@ -72,7 +77,7 @@ std::cout << "Consumer thread running..." << std::endl;
     {
         if (eventQueue.pop(rawMsg))
         {
-            submitOrder(orderBook, rawMsg);
+            submitOrder(orderBooks, orderDirectory, rawMsg);
         }
         else
         {
@@ -84,17 +89,19 @@ std::cout << "Consumer thread running..." << std::endl;
 }
 
 
-void submitOrder(OrderBook& orderBook, RawMessage& rawMsg)
+void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks, 
+                 OrderDirectory& orderDirectory,
+                 RawMessage& rawMsg)
 {
     const auto msgType = static_cast<char>(rawMsg.data_[0]);
 
-    // A add D cancel U update/modify
+    // A add, D cancel, U update/modify
     switch (msgType) 
     {
         case 'A':
         {
             auto* addRaw= reinterpret_cast<ITCH50::AddOrderMsg*>(rawMsg.data_.data());
-            addRaw->convert_network_to_host();
+            addRaw->convertNetworkToHost();
 
             auto newOrder = std::make_shared<Order>(
                 OrderType::GoodTillCancel,
@@ -103,29 +110,45 @@ void submitOrder(OrderBook& orderBook, RawMessage& rawMsg)
                 (Price)addRaw->Price,
                 (Quantity)addRaw->Shares
             );
+            
+            auto instrument = addRaw->getInstrumentName();
+            orderDirectory.addOrderID(addRaw->OrderID, instrument);
 
-            orderBook.addOrder(newOrder);
+            auto [orderbook_it, inserted] = orderBooks.try_emplace(instrument, std::move(instrument));
+            orderbook_it->second.addOrder(newOrder);
         }
             break;
 
         case 'D':
         {
             auto* delRaw = reinterpret_cast<ITCH50::CancelOrderMsg*>(rawMsg.data_.data());
-            delRaw->convert_network_to_host();
-            orderBook.cancelOrder(delRaw->OrderID);
+            delRaw->convertNetworkToHost();
+
+            auto instrument = orderDirectory.getInstrument(delRaw->OrderID);
+            if (instrument == nullptr)
+                break;
+
+            orderBooks[*instrument].cancelOrder(delRaw->OrderID);
+
+            orderDirectory.delOrderID(delRaw->OrderID);
         }
             break;
 
         case 'U':
         {
             auto* modRaw = reinterpret_cast<ITCH50::ModifyOrderMsg*>(rawMsg.data_.data());
-            modRaw->convert_network_to_host();
-            auto orderEntry = orderBook.getOrderEntry(modRaw->OldOrderID);
+            modRaw->convertNetworkToHost();
+
+            auto instrument = orderDirectory.getInstrument(modRaw->OldOrderID);
+            if (instrument == nullptr)
+                break;
+
+            auto orderEntry = orderBooks[*instrument].getOrderEntry(modRaw->OldOrderID);
             if (orderEntry == nullptr)
                 break;
 
             auto oldSide = orderEntry->order_->getSide();
-            orderBook.cancelOrder(modRaw->OldOrderID);
+            orderBooks[*instrument].cancelOrder(modRaw->OldOrderID);
 
             auto newOrder = std::make_shared<Order>(
                 OrderType::GoodTillCancel,
@@ -135,7 +158,10 @@ void submitOrder(OrderBook& orderBook, RawMessage& rawMsg)
                 (Quantity)modRaw->Shares
             );
 
-            orderBook.addOrder(newOrder);
+            orderDirectory.addOrderID(modRaw->NewOrderID, *instrument);
+            orderBooks[*instrument].addOrder(newOrder);
+
+            orderDirectory.delOrderID(modRaw->OldOrderID);
         }
             break;
 
