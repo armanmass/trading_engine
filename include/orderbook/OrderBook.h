@@ -5,16 +5,14 @@
 #include "LevelInfo.h"
 
 #include <mutex>
-#include <atomic>
-#include <condition_variable>
-#include <thread>
-
 #include <map>
 #include <unordered_map>
-
 #include <cstddef>
 
-class OrderBook {
+class OrderBookVisitor;
+
+class OrderBook 
+{
     private:
         struct OrderEntry;
     public:
@@ -26,6 +24,8 @@ class OrderBook {
         void operator=(const OrderBook&)  = delete;
         OrderBook(const OrderBook&&)      = delete;
         void operator=(const OrderBook&&) = delete;
+
+        void accept(OrderBookVisitor& visitor);
 
         Trades addOrder(OrderPointer order);
         bool addOrderCoreLogic(OrderPointer order);
@@ -42,6 +42,8 @@ class OrderBook {
                 return nullptr; 
             return &orders_[orderId]; 
         }
+
+        void pruneGoodForDayOrders();
 
     private:
         struct OrderEntry 
@@ -63,8 +65,6 @@ class OrderBook {
 
         bool canFullyFill(Side side, Price price, Quantity quantity) const;
 
-        void pruneGoodForDayOrders();
-
         void cancelOrders(OrderIds orderIds);
         void cancelOrderInternal(OrderId orderId);
 
@@ -83,8 +83,4 @@ class OrderBook {
         std::unordered_map<OrderId, OrderEntry> orders_;
 
         mutable std::mutex ordersMutex_;
-        std::thread ordersPruneThread_;
-        
-        std::condition_variable shutdownConditionVariable_;
-        std::atomic<bool> shutdown_{ false };
 };

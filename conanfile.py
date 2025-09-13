@@ -31,10 +31,7 @@ class SetUp(ConanFile):
                 sanitizer_flags = ["-fsanitize=undefined"]
 
             debug_flags = warning_flags + sanitizer_flags
-            if sanitizer_flags:
-                debug_flags.extend(["-O1", "-g", "-fno-omit-frame-pointer"])
-            else:
-                debug_flags.extend(["-Og", "-g"])
+            debug_flags.extend(["-O1", "-g", "-fno-omit-frame-pointer"])
             
             if self.settings.compiler in ["clang", "gcc"]:
                 self.conf.define("tools.build:cxxflags", debug_flags)

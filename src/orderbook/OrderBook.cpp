@@ -1,25 +1,21 @@
 #include "OrderBook.h"
+#include "OrderBookVisitor.h"
 #include "Order.h"
 
 #include <numeric>
 #include <iostream>
 
-OrderBook::OrderBook()
-    : ordersPruneThread_( [this] { pruneGoodForDayOrders(); })
-    { }
+OrderBook::OrderBook() { }
 
 OrderBook::OrderBook(std::string&& instrument)
-    : instrument_(instrument),
-      ordersPruneThread_( [this] { pruneGoodForDayOrders(); })
-    { }
-
-OrderBook::~OrderBook()
-{
-    shutdown_.store(true, std::memory_order_release);
-    shutdownConditionVariable_.notify_one();
-    ordersPruneThread_.join();
+    : instrument_(instrument)
+    {
 }
 
+OrderBook::~OrderBook() { }
+
+void OrderBook::accept(OrderBookVisitor& visitor)
+{ visitor.visit(*this); }
 
 Trades OrderBook::addOrder(OrderPointer order)
 {
@@ -120,12 +116,9 @@ OrderbookLevelInfos OrderBook::getOrderInfos() const
     LevelInfos asks;
     LevelInfos bids;
 
-    // lambda function will iterate over all prices in asks_ and bids_
-    // accumalte each list at each price level in each
-    // push back each level to the current level info vector
-    auto createLI = [](Price price, const OrderPointers& orders)
+    auto createLI = [](Price price, const OrderPointers& orders) 
     {
-        return LevelInfo{ price, std::accumulate(orders.begin(), orders.end(), Quantity{},
+        return LevelInfo{ price, std::accumulate(orders.begin(), orders.end(), Quantity{}, 
                         [](Quantity totalQuantity, const OrderPointer& order){
                             return totalQuantity + order->getRemQuantity();
                         })};
@@ -143,52 +136,17 @@ OrderbookLevelInfos OrderBook::getOrderInfos() const
 
 void OrderBook::pruneGoodForDayOrders()
 {
-    using namespace std::chrono;
-    const auto MarketClose = hours(13);
+    std::scoped_lock ordersLock{ ordersMutex_ };
 
-
-    while (!shutdown_.load(std::memory_order_acquire))
+    OrderIds orderIds;
+    for (const auto& [orderId, entry] : orders_)
     {
-        std::unique_lock ordersLock{ ordersMutex_ };
-        
-        const auto now = system_clock::to_time_t(system_clock::now());
-        std::tm time_info;
-        localtime_r(&now, &time_info);
-
-        if (time_info.tm_hour >= MarketClose.count())
-            ++time_info.tm_mday;
-
-        time_info.tm_hour = MarketClose.count();
-        time_info.tm_min = 0;
-        time_info.tm_sec = 0;
-
-        auto next = system_clock::from_time_t(mktime(&time_info));
-        auto time_rem = next - system_clock::from_time_t(now) + milliseconds(50);
-
-        // if we wake up randomly (we didn't time out) then continue
-        if (shutdownConditionVariable_.wait_for(ordersLock, time_rem,
-            [this] {
-                return shutdown_.load(std::memory_order_acquire);
-            }))
-        {
-           continue;
-        }
-
-        OrderIds orderIds;
-
-        
-        for (const auto& [orderId, entry] : orders_)
-        {
-            if (entry.order_->getOrderType() == OrderType::GoodForDay)
-                orderIds.push_back(orderId);
-        }
-
-        // cancelOrders(orderIds);
-        // changed lock scope this creates duplicate code
-        // there must be better practice for this
-        for (const auto& orderId : orderIds)
-            cancelOrderInternal(orderId);
+        if (entry.order_->getOrderType() == OrderType::GoodForDay)
+            orderIds.push_back(orderId);
     }
+
+    for (const auto& orderId : orderIds)
+        cancelOrderInternal(orderId);
 }
 
 
