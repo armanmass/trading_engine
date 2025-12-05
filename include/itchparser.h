@@ -7,8 +7,7 @@
 #include <algorithm>
 #include <array>
 
-constexpr static size_t BUFFER_SIZE{ 64 * 1024 };
-
+static constexpr size_t BUFFER_SIZE{ 64 * 1024 };
 
 class ITCHParser
 {
@@ -37,7 +36,7 @@ public:
     [[nodiscard]] constexpr static size_t size() noexcept { return BUFFER_SIZE; }
 
 private:
-    constexpr static std::array<char, 3> SUPPORTED_TYPES{ 'A', 'D', 'U' };
+    static constexpr std::array<char, 3> SUPPORTED_TYPES{ 'A', 'D', 'U' };
 
     [[nodiscard]] bool fillBuffer();
     [[nodiscard]] bool isSupportedMsgType(const char msg_type) const noexcept

@@ -2,6 +2,7 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
+#include <new>
 #include <utility>
 
 template <typename T, typename Allocator = std::allocator<T>>
@@ -21,12 +22,9 @@ class RingBuffer
             std::allocator_traits<Allocator>::deallocate(alloc_, ring_, capacity_);
         }
 
-        // cant access full / empty externally now
-        // use return bool to notify thread of successful/failed operation
         bool pop(T& value)
         {
-            // acquire relaxed cause i own it
-            auto popCursor = pop_cursor_.load(std::memory_order_relaxed);
+            auto popCursor{ pop_cursor_.load(std::memory_order_relaxed) };
 
             if (empty(cached_push_cursor_, popCursor)) 
             {
@@ -35,7 +33,6 @@ class RingBuffer
                     return false;
             }
 
-
             value = std::move(ring_[popCursor & mask_]);
             ring_[popCursor & mask_].~T();
 
@@ -43,10 +40,11 @@ class RingBuffer
             return true;
         }
 
+
         template <typename U>
         bool push(U&& value)
         {
-            auto pushCursor= push_cursor_.load(std::memory_order_relaxed);
+            auto pushCursor{ push_cursor_.load(std::memory_order_relaxed) };
 
             if (full(pushCursor, cached_pop_cursor_)) 
             {
@@ -62,21 +60,18 @@ class RingBuffer
 
 
         // capacity
-        [[nodiscard]] bool empty(size_t push, size_t pop) const noexcept { return push == pop; }
         [[nodiscard]] size_t size(size_t push, size_t pop) const noexcept { return push-pop; }
         [[nodiscard]] size_t capacity() const noexcept { return capacity_; }
+
+        [[nodiscard]] bool empty(size_t push, size_t pop) const noexcept { return push == pop; }
         [[nodiscard]] bool full(size_t push, size_t pop) const noexcept { return (push-pop) == capacity_; }
 
     private:
-        // maybe dont lock capacity make it a ctor param so we can
-        // test what sizes are most offer best performance
         static constexpr size_t capacity_{ 2 << 12 };
         static constexpr size_t mask_{ capacity_-1 };
-        static constexpr size_t cache_line_size_{ 64 };
+        static constexpr size_t cache_line_size_{ std::hardware_destructive_interference_size };
 
-        [[no_unique_address]] Allocator alloc_;
         T* ring_;
-
 
         alignas(cache_line_size_) std::atomic<size_t> push_cursor_{ };
         alignas(cache_line_size_) size_t cached_push_cursor_{ };
@@ -84,6 +79,7 @@ class RingBuffer
         alignas(cache_line_size_) std::atomic<size_t> pop_cursor_{ };
         alignas(cache_line_size_) size_t cached_pop_cursor_{ };
 
-        static_assert(std::atomic<size_t>::is_always_lock_free);
+        [[no_unique_address]] Allocator alloc_;
 
+        static_assert(std::atomic<size_t>::is_always_lock_free);
 };

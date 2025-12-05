@@ -6,7 +6,8 @@
 #include <string_view>
 
 template <typename T>
-constexpr T bs(T value) { return std::byteswap(value); }
+[[nodiscard]] constexpr T bs(T value) noexcept 
+{ return std::byteswap(value); }
 
 namespace ITCH50
 {
@@ -36,13 +37,12 @@ namespace ITCH50
         {
             std::string_view instrument(Stock, sizeof(Stock));
             auto end = instrument.find_last_not_of(' ');
-            return std::string(instrument.substr(0,end+1));
+            return std::string{ instrument.substr(0,end+1) };
         }
     };
 
     struct CancelOrderMsg
     {
-
         char MessageType;
         uint16_t StockLocation;
         uint16_t TrackingNumber;

@@ -7,7 +7,9 @@
 
 #include "itchparser.h"
 #include "itch_msg.h"
+#include "debug.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <chrono>
@@ -34,7 +36,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    std::cout << "Producer thread running..." << std::endl;
+    LOG_DEBUG("Producer thread running...");
 
     std::string itchFilePath = argv[1];
     ITCHParser itchParser(itchFilePath);
@@ -61,7 +63,6 @@ int main(int argc, char** argv)
 
         RawMessage rawMsg;
         std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
-        rawMsg.size_ = static_cast<decltype(RawMessage::size_)>(itchMsg.size());
 
         while (!eventQueue.push(rawMsg))
             std::this_thread::yield();
@@ -69,7 +70,7 @@ int main(int argc, char** argv)
 
     producerDone.store(true, std::memory_order_release);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 void prunerWorker(std::stop_token stoken,
@@ -118,7 +119,8 @@ void consumerWorker(
     RingBuffer<RawMessage>& eventQueue,
     std::atomic<bool>& producerDone)
 {
-std::cout << "Consumer thread running..." << std::endl;
+    LOG_DEBUG("Consumer thread running...");
+
     RawMessage rawMsg;
     while (true)
     {
@@ -146,7 +148,7 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
     {
         case 'A':
         {
-            auto* addRaw= reinterpret_cast<ITCH50::AddOrderMsg*>(rawMsg.data_.data());
+            auto* addRaw = reinterpret_cast<ITCH50::AddOrderMsg*>(rawMsg.data_.data());
             addRaw->convertNetworkToHost();
 
             auto newOrder = std::make_shared<Order>(
@@ -212,7 +214,7 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
             break;
 
         default:
-        std::cout << "Received message type: " << msgType << std::endl;
+            LOG_DEBUG("Received message type: " << msgType);
             throw std::logic_error("Unsupported message type.");
     }
 }

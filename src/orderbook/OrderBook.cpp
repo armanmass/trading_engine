@@ -4,13 +4,13 @@
 
 #include <numeric>
 #include <iostream>
+#include "debug.h"
 
 OrderBook::OrderBook() { }
 
 OrderBook::OrderBook(std::string&& instrument)
     : instrument_(instrument)
-    {
-}
+{ }
 
 OrderBook::~OrderBook() { }
 
@@ -22,9 +22,7 @@ Trades OrderBook::addOrder(OrderPointer order)
     std::scoped_lock ordersLock{ ordersMutex_ };
 
     if (!addOrderCoreLogic(order))
-    {
         return { };
-    }
 
     return matchOrders();
 }
@@ -53,14 +51,15 @@ bool OrderBook::addOrderCoreLogic(OrderPointer order)
         }
     }
 
-    if (order->getOrderType() == OrderType::FillAndKill && !hasMatch(order->getSide(), order->getPrice()))
+    if (order->getOrderType() == OrderType::FillAndKill 
+        && !hasMatch(order->getSide(), order->getPrice()))
         return false;
 
-    if (order->getOrderType() == OrderType::FillOrKill && !canFullyFill(order->getSide(), order->getPrice(), order->getRemQuantity()))
+    if (order->getOrderType() == OrderType::FillOrKill 
+        && !canFullyFill(order->getSide(), order->getPrice(), order->getRemQuantity()))
         return false;
 
     OrderPointers::iterator it;
-
     if (order->getSide() == Side::Buy)
     {
         auto& bidsAtPrice = bids_[order->getPrice()];
@@ -76,7 +75,6 @@ bool OrderBook::addOrderCoreLogic(OrderPointer order)
 
     orders_[order->getOrderID()] = OrderEntry { order, it };
 
-    onOrderAdded(order);
     return true;
 }
 
@@ -103,9 +101,7 @@ Trades OrderBook::modifyOrder(OrderModify modifiedOrder)
     auto newOrder = modifiedOrder.toOrderPointer(ot);
 
     if (!addOrderCoreLogic(newOrder))
-    {
         return { };
-    }
 
     return matchOrders();
 }
@@ -145,8 +141,7 @@ void OrderBook::pruneGoodForDayOrders()
             orderIds.push_back(orderId);
     }
 
-    for (const auto& orderId : orderIds)
-        cancelOrderInternal(orderId);
+    cancelOrders(orderIds);
 }
 
 
@@ -182,7 +177,6 @@ void OrderBook::cancelOrderInternal(OrderId orderId)
     }
 
     orders_.erase(orderId);
-    onOrderCancelled(order);
 }
 
 
@@ -234,7 +228,7 @@ bool OrderBook::hasMatch(Side side, Price price) const {
     }
     else
     {
-        if(!bids_.empty() && bids_.begin()->first <= price)
+        if(!bids_.empty() && bids_.begin()->first >= price)
             return true;
     }
     return false;
@@ -349,8 +343,8 @@ Trades OrderBook::matchOrders() {
         {
             auto askInfo = trade.getAskTrade();
             auto bidInfo = trade.getBidTrade();
-std::cout << instrument_ << ": " << "Ask " << askInfo.orderId_ << " matched with Bid " << bidInfo.orderId_ << " for " \
-          << askInfo.quantity_ << " shares at $" << askInfo.price_/10000.0 << " each." << std::endl;
+            LOG_DEBUG(instrument_ << ": " << "Ask " << askInfo.orderId_ << " matched with Bid " << bidInfo.orderId_ << " for "
+                      << askInfo.quantity_ << " shares at $" << askInfo.price_/10000.0 << " each.");
         }
 
     }

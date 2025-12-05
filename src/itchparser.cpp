@@ -8,11 +8,11 @@ ITCHParser::nextMsg()
     {
         if (buffer_pos_ == buffer_end_ && !fillBuffer())
                 return std::nullopt;
+
         // skip null byte
         if (++buffer_pos_ == buffer_end_ && !fillBuffer())
                 return std::nullopt;
 
-// std::cout << "msgSize: " << static_cast<int>(buffer_[buffer_pos_]) << std::endl;
         // read size byte and increment
         const size_t msgSize = static_cast<size_t>(buffer_[buffer_pos_++]);
 
@@ -20,10 +20,9 @@ ITCHParser::nextMsg()
         // if went off buffer we have to refill
         if (buffer_pos_ == buffer_end_ && !fillBuffer())
                 return std::nullopt;
-        // read msgtype but don't advance since msgtype is included in msgsize
-// std::cout << "msgType: " << static_cast<char>(buffer_[buffer_pos_]) << std::endl;
-        const char msgType = static_cast<char>(buffer_[buffer_pos_]);
 
+        // read msgtype but don't advance since msgtype is included in msgsize
+        const char msgType = static_cast<char>(buffer_[buffer_pos_]);
 
         if ((buffer_pos_ + msgSize > buffer_end_) && !fillBuffer())
             return std::nullopt;
@@ -34,7 +33,9 @@ ITCHParser::nextMsg()
             continue;
         }
         
-        std::span<const std::byte> msgSpan{ buffer_.data()+static_cast<buffer_diff_t>(buffer_pos_), msgSize };
+        std::span<const std::byte> msgSpan{ buffer_.data() + 
+                                            static_cast<buffer_diff_t>(buffer_pos_), 
+                                            msgSize };
         buffer_pos_ += msgSize;
         return msgSpan;
     }
@@ -44,16 +45,6 @@ ITCHParser::nextMsg()
 
 bool ITCHParser::fillBuffer()
 {
-    // if unread bytes in buffer
-        // get length of unread bytes
-        // move to front of buffer
-        // set start read index to length
-        // read in buffer_size - length of unread bytes
-    // else 
-        //just read full buffer
-        //we could bypass if else and just do all the compute
-        //avoiding branching is probably best practice 
-    
     size_t unread_bytes = buffer_end_ - buffer_pos_;
     std::move(buffer_.begin()+static_cast<buffer_diff_t>(buffer_pos_), 
               buffer_.begin()+static_cast<buffer_diff_t>(buffer_end_), 

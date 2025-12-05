@@ -33,20 +33,18 @@ class SetUp(ConanFile):
             debug_flags = warning_flags + sanitizer_flags
             debug_flags.extend(["-O0", "-g3", "-fno-omit-frame-pointer"])
             
-            if self.settings.compiler in ["clang", "gcc"]:
-                self.conf.define("tools.build:cxxflags", debug_flags)
-                self.conf.define("tools.build:cflags", debug_flags)
-                if sanitizer_flags:
-                    self.conf.define("tools.build:sharedlinkflags", sanitizer_flags)
-                    self.conf.define("tools.build:exelinkflags", sanitizer_flags)
+            self.conf.define("tools.build:cxxflags", debug_flags)
+            self.conf.define("tools.build:cflags", debug_flags)
+            self.conf.define("tools.build:sharedlinkflags", sanitizer_flags)
+            self.conf.define("tools.build:exelinkflags", sanitizer_flags)
 
         # RELEASE
         elif self.settings.build_type == "Release":
             print("Configuring RELEASE build.")
-            if self.settings.compiler in ["clang", "gcc"]:
-                release_flags = ["-O3", "-DNDEBUG", "-march=native"]
-                self.conf.define("tools.build:cxxflags", release_flags)
-                self.conf.define("tools.build:cflags", release_flags)
+            release_flags = ["-O3", "-DNDEBUG", "-march=native"]
+            self.conf.define("tools.build:cxxflags", release_flags)
+            self.conf.define("tools.build:cflags", release_flags)
+
     
     def requirements(self):
         self.requires("gtest/1.17.0")
@@ -55,15 +53,10 @@ class SetUp(ConanFile):
     def generate(self):
         cmake = CMakeToolchain(self)
         cmake.generator = "Ninja"
-
-        if self.settings.compiler.cppstd:
-            cmake.variables["CMAKE_CXX_STANDARD"] = str(self.settings.compiler.cppstd)
-            cmake.variables["CMAKE_CXX_STANDARD_REQUIRED"] = "ON"
         cmake.generate()
 
         deps = CMakeDeps(self)
         deps.generate()
-        
 
     def layout(self):
         cmake_layout(self)
