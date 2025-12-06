@@ -41,7 +41,7 @@ class SetUp(ConanFile):
         # RELEASE
         elif self.settings.build_type == "Release":
             print("Configuring RELEASE build.")
-            release_flags = ["-O3", "-DNDEBUG", "-march=native"]
+            release_flags = ["-O3", "-DNDEBUG", "-march=native", "-flto"]
             self.conf.define("tools.build:cxxflags", release_flags)
             self.conf.define("tools.build:cflags", release_flags)
 

@@ -305,10 +305,8 @@ Trades OrderBook::matchOrders() {
                 TradeInfo { bid->getOrderID(), quantity, bid->getPrice()},
                 TradeInfo { ask->getOrderID(), quantity, ask->getPrice()}
             );
-
-            onOrderMatched(bid->getPrice(), quantity, bid->getRemQuantity() == 0);
-            onOrderMatched(ask->getPrice(), quantity, ask->getRemQuantity() == 0);
         }
+
         if (lowestAsks.empty())
         {
             asks_.erase(askPrice);
