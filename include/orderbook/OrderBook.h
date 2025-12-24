@@ -3,6 +3,7 @@
 #include "OrderModify.h"
 #include "TradeInfo.h"
 #include "LevelInfo.h"
+#include "MatchResult.h"
 
 #include <mutex>
 #include <map>
@@ -27,15 +28,16 @@ class OrderBook
 
         void accept(OrderBookVisitor& visitor);
 
-        Trades addOrder(OrderPointer order);
+        MatchResult addOrder(OrderPointer order);
         bool addOrderCoreLogic(OrderPointer order);
 
         void cancelOrder(OrderId orderId);
-        Trades modifyOrder(OrderModify modifiedOrder);
+        MatchResult modifyOrder(OrderModify modifiedOrder);
 
         OrderbookLevelInfos getOrderInfos() const;
 
         std::size_t size() const { return orders_.size(); }
+        const std::string& getInstrument() const { return instrument_; }
         OrderEntry* getOrderEntry(OrderId orderId) 
         { 
             if (!orders_.contains(orderId))
@@ -45,12 +47,6 @@ class OrderBook
 
         void pruneGoodForDayOrders();
 
-    private:
-        struct OrderEntry 
-        {
-            OrderPointer order_{ nullptr };
-            OrderPointers::iterator location_;
-        };
 
         struct LevelData 
         {
@@ -61,7 +57,7 @@ class OrderBook
         };
 
         bool hasMatch(Side side, Price price) const;
-        Trades matchOrders();
+        MatchResult matchOrders();
 
         bool canFullyFill(Side side, Price price, Quantity quantity) const;
 
@@ -72,10 +68,16 @@ class OrderBook
         void onOrderCancelled(OrderPointer order);
         void onOrderMatched(Price price, Quantity quantity, bool isFullyFilled);
         void updateLevelData(Price price, Quantity quantity, LevelData::Action action);
+        std::unordered_map<Price, LevelData> data_;
+
+    private:
+        struct OrderEntry 
+        {
+            OrderPointer order_{ nullptr };
+            OrderPointers::iterator location_;
+        };
 
         std::string instrument_;
-
-        std::unordered_map<Price, LevelData> data_;
 
         std::map<Price, OrderPointers, std::greater<Price>> bids_;
         std::map<Price, OrderPointers, std::less<Price>> asks_;

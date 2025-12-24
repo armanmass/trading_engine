@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <array>
 
-static constexpr size_t BUFFER_SIZE{ 64 * 1024 };
+static constexpr size_t BUFFER_SIZE{ 64 * 1024 * 128};
 
 class ITCHParser
 {

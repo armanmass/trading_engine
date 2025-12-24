@@ -67,7 +67,7 @@ class RingBuffer
         [[nodiscard]] bool full(size_t push, size_t pop) const noexcept { return (push-pop) == capacity_; }
 
     private:
-        static constexpr size_t capacity_{ 2 << 12 };
+        static constexpr size_t capacity_{ 2 << 14 };
         static constexpr size_t mask_{ capacity_-1 };
         static constexpr size_t cache_line_size_{ std::hardware_destructive_interference_size };
 

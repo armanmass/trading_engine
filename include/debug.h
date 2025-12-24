@@ -1,6 +1,4 @@
-#ifndef DEBUG_H
-#define DEBUG_H
-
+#pragma once
 #include <iostream>
 
 #ifndef NDEBUG
@@ -8,5 +6,3 @@
 #else
 #define LOG_DEBUG(x) do {} while (0)
 #endif
-
-#endif // DEBUG_H

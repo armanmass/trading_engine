@@ -2,20 +2,22 @@
 #include "Order.h"
 #include <unordered_map>
 
+class OrderBook;
+
 class OrderDirectory
 {
 public:
-    void addOrderID(OrderId orderId, const std::string& instrument) { idToInstrument[orderId] = instrument; }
+    void addOrderID(OrderId orderId, OrderBook* orderBook) { idToOrderBook[orderId] = orderBook; }
 
-    void delOrderID(OrderId orderId) { idToInstrument.erase(orderId); }
+    void delOrderID(OrderId orderId) { idToOrderBook.erase(orderId); }
 
-    const std::string* getInstrument(OrderId orderId) 
+    OrderBook* getOrderBook(OrderId orderId)
     {
-        auto it = idToInstrument.find(orderId);
-        if (it == idToInstrument.end()) return nullptr;
-        return &it->second;
+        auto it = idToOrderBook.find(orderId);
+        if (it == idToOrderBook.end()) return nullptr;
+        return it->second;
     }
 
 private:
-    std::unordered_map<OrderId, std::string> idToInstrument;
+    std::unordered_map<OrderId, OrderBook*> idToOrderBook;
 };

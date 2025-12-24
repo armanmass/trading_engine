@@ -1,9 +1,11 @@
 #include "OrderBook.h"
 #include "OrderDirectory.h"
 #include "PruningVisitor.h"
+#include "MatchResult.h"
 
 #include "ringbuffer.h"
 #include "rawmessage.h"
+
 
 #include "itchparser.h"
 #include "itch_msg.h"
@@ -83,7 +85,7 @@ int main(int argc, char** argv)
         RawMessage rawMsg;
         std::memcpy(rawMsg.data_.data(),itchMsg.data(),itchMsg.size());
 
-        while (!shutdown_flag.load(std::memory_order_relaxed) && !eventQueue.push(rawMsg))
+        while (!shutdown_flag.load(std::memory_order_relaxed) && !eventQueue.push(std::move(rawMsg)))
             std::this_thread::yield();
     }
 
@@ -130,9 +132,7 @@ void prunerWorker(std::stop_token stoken,
         auto next_prune_time = system_clock::from_time_t(mktime(&time_info));
 
         while (system_clock::now() < next_prune_time && !stoken.stop_requested())
-        {
-            std::this_thread::sleep_for(seconds(1));
-        }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
 
         if (stoken.stop_requested())
             break;
@@ -163,7 +163,7 @@ void consumerWorker(
         else
         {
             if (producerDone) break;
-            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 }
@@ -192,10 +192,13 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
             );
             
             auto instrument = addRaw->getInstrumentName();
-            orderDirectory.addOrderID(addRaw->OrderID, instrument);
-
+            
             auto [orderbook_it, inserted] = orderBooks.try_emplace(instrument, std::move(instrument));
-            orderbook_it->second.addOrder(newOrder);
+            orderDirectory.addOrderID(addRaw->OrderID, &orderbook_it->second);
+            
+            auto matchResult = orderbook_it->second.addOrder(newOrder);
+            for (const auto& filledOrder : matchResult.filledOrders)
+                orderDirectory.delOrderID(filledOrder);
         }
             break;
 
@@ -204,11 +207,11 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
             auto* delRaw = reinterpret_cast<ITCH50::CancelOrderMsg*>(rawMsg.data_.data());
             delRaw->convertNetworkToHost();
 
-            auto instrument = orderDirectory.getInstrument(delRaw->OrderID);
-            if (instrument == nullptr)
+            auto orderBook = orderDirectory.getOrderBook(delRaw->OrderID);
+            if (orderBook == nullptr)
                 break;
 
-            orderBooks[*instrument].cancelOrder(delRaw->OrderID);
+            orderBook->cancelOrder(delRaw->OrderID);
 
             orderDirectory.delOrderID(delRaw->OrderID);
         }
@@ -219,16 +222,16 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
             auto* modRaw = reinterpret_cast<ITCH50::ModifyOrderMsg*>(rawMsg.data_.data());
             modRaw->convertNetworkToHost();
 
-            auto instrument = orderDirectory.getInstrument(modRaw->OldOrderID);
-            if (instrument == nullptr)
+            auto orderBook = orderDirectory.getOrderBook(modRaw->OldOrderID);
+            if (orderBook == nullptr)
                 break;
 
-            auto orderEntry = orderBooks[*instrument].getOrderEntry(modRaw->OldOrderID);
+            auto orderEntry = orderBook->getOrderEntry(modRaw->OldOrderID);
             if (orderEntry == nullptr)
                 break;
 
             auto oldSide = orderEntry->order_->getSide();
-            orderBooks[*instrument].cancelOrder(modRaw->OldOrderID);
+            orderBook->cancelOrder(modRaw->OldOrderID);
 
             auto newOrder = std::make_shared<Order>(
                 OrderType::GoodTillCancel,
@@ -238,8 +241,10 @@ void submitOrder(std::unordered_map<std::string, OrderBook>& orderBooks,
                 (Quantity)modRaw->Shares
             );
 
-            orderDirectory.addOrderID(modRaw->NewOrderID, *instrument);
-            orderBooks[*instrument].addOrder(newOrder);
+            orderDirectory.addOrderID(modRaw->NewOrderID, orderBook);
+            auto matchResult = orderBook->addOrder(newOrder);
+            for (const auto& filledOrder : matchResult.filledOrders)
+                orderDirectory.delOrderID(filledOrder);
 
             orderDirectory.delOrderID(modRaw->OldOrderID);
         }

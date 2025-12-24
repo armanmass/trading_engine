@@ -17,7 +17,7 @@ OrderBook::~OrderBook() { }
 void OrderBook::accept(OrderBookVisitor& visitor)
 { visitor.visit(*this); }
 
-Trades OrderBook::addOrder(OrderPointer order)
+MatchResult OrderBook::addOrder(OrderPointer order)
 {
     std::scoped_lock ordersLock{ ordersMutex_ };
 
@@ -87,7 +87,7 @@ void OrderBook::cancelOrder(OrderId orderId)
 }
 
 
-Trades OrderBook::modifyOrder(OrderModify modifiedOrder)
+MatchResult OrderBook::modifyOrder(OrderModify modifiedOrder)
 {
     std::scoped_lock ordersLock{ ordersMutex_ };
 
@@ -141,7 +141,8 @@ void OrderBook::pruneGoodForDayOrders()
             orderIds.push_back(orderId);
     }
 
-    cancelOrders(orderIds);
+    for (auto orderId : orderIds)
+        cancelOrderInternal(orderId);
 }
 
 
@@ -261,8 +262,8 @@ bool OrderBook::canFullyFill(Side side, Price price, Quantity quantity) const
 }
 
 
-Trades OrderBook::matchOrders() {
-    Trades trades;
+MatchResult OrderBook::matchOrders() {
+    MatchResult result;
 
     while (true)
     {
@@ -293,15 +294,17 @@ Trades OrderBook::matchOrders() {
             {
                 lowestAsks.pop_front();
                 orders_.erase(ask->getOrderID());
+                result.filledOrders.push_back(ask->getOrderID());
             }
 
             if (bid->getRemQuantity() == 0)
             {
                 highestBids.pop_front();
                 orders_.erase(bid->getOrderID());
+                result.filledOrders.push_back(bid->getOrderID());
             }
 
-            trades.emplace_back(
+            result.trades.emplace_back(
                 TradeInfo { bid->getOrderID(), quantity, bid->getPrice()},
                 TradeInfo { ask->getOrderID(), quantity, ask->getPrice()}
             );
@@ -335,9 +338,9 @@ Trades OrderBook::matchOrders() {
         if (order->getOrderType() == OrderType::FillAndKill)
             cancelOrderInternal(order->getOrderID());
     }
-    if (!trades.empty())
+    if (!result.trades.empty())
     {
-        for (const auto& trade : trades)
+        for (const auto& trade : result.trades)
         {
             auto askInfo = trade.getAskTrade();
             auto bidInfo = trade.getBidTrade();
@@ -347,5 +350,5 @@ Trades OrderBook::matchOrders() {
 
     }
 
-    return trades;
+    return result;
 }
