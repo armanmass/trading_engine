@@ -43,7 +43,6 @@ graph TD
 
 The core of the engine's performance lies in the optimization of the SPSC FIFO queue. Below is the progression of performance gains achieved through various techniques:
 
-![SPSC Optimization Chart](https://via.placeholder.com/800x400?text=Place+SPSC+Optimization+Chart+Here)
 
 | Optimization Step | Throughput | Improvement |
 |-------------------|------------|-------------|
