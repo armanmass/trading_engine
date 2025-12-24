@@ -1,41 +1,147 @@
-# Demo
+# HFT Trading Engine
+
+A high-performance, low-latency trading engine simulation written in Modern C++20. This project demonstrates the implementation of a Limit Order Book (LOB) fed by a NASDAQ ITCH 5.0 market data feed, utilizing a custom lock-free Single Producer Single Consumer (SPSC) ring buffer for efficient inter-thread communication.
+
+---
+
+## Demo
 ![example](https://i.imgur.com/X0djJWY.gif)
 
-# Step 1: Implementing and optimizing SPSC FIFO
-## No Atomics (Data Race)
-    items_per_second=10.6608M/s
+---
 
-## atomic push_cursor_ and pop_cursor_ (Data Race)
-    items_per_second=4.53887M/s
+## Architecture
 
-## add cache alighnment (Data Race)
-    items_per_second=5.34539M/s
+The system follows a producer-consumer pattern to decouple market data parsing from order book processing.
 
-## add acquire/release memory_ordering (No Race)
-    items_per_second=8.33712M/s
+```mermaid
+graph TD
+    Input[ITCH 5.0 File] -->|Binary Stream| Producer[Producer Thread]
+    
+    subgraph Core Engine
+        Producer -->|Parse & Push| RB((SPSC Ring Buffer))
+        RB -->|Pop RawMessage| Consumer[Consumer Thread]
+        
+        Consumer -->|Process Order| OM{Order Manager}
+        OM -->|Add/Cancel/Mod| OB[Order Books Map]
+        
+        Pruner[Pruner Thread] -.->|Clean Expired Orders| OB
+    end
+    
+    style RB fill:#f9f,stroke:#333,stroke-width:2px
+    style Producer fill:#bbf,stroke:#333,stroke-width:2px
+    style Consumer fill:#bfb,stroke:#333,stroke-width:2px
+```
 
-## add cursor caching (No Race)
-    items_per_second=22.2152M/s
+1.  **Producer:** Reads the ITCH 5.0 binary file, parses message headers, and pushes raw message bytes into the ring buffer.
+2.  **SPSC Ring Buffer:** A lock-free, cache-friendly queue that facilitates low-latency data transfer.
+3.  **Consumer:** Pulls messages, interprets the specific ITCH message type (Add, Cancel, Update), and updates the relevant Order Book.
+4.  **Pruner:** A background thread that monitors market hours and cleans up "Good-Till-Day" orders after market close.
 
-## increased buffer size at power of 2 to perform & modulous (No Race)
-    items_per_second=34.3127M/s
+---
 
-## add compiler optimizations (No Race)
-    items_per_second=218.212M/s
+## SPSC Optimization Measurements
 
+The core of the engine's performance lies in the optimization of the SPSC FIFO queue. Below is the progression of performance gains achieved through various techniques:
 
-Future Testing:
-- Test with controlled variables
-- Test different compilers
-- Test with controlled compiler options
-- Build pipe line permutating variables / compiler options
+![SPSC Optimization Chart](https://via.placeholder.com/800x400?text=Place+SPSC+Optimization+Chart+Here)
 
-# Step 2: NASDAQ ITCH Parser
-Following [Nasdaq ITCH 5.0 Specification](https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/NQTVITCHSpecification.pdf) I created structs of the message size with the appropriate fields using packing to avoid padding.  [emi.nasdaq.com](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/) where I managed to download 8GB of ITCH data for free. I parsed a few bytes at a time initally reading the message size and message type. If I was not supporting the type I would jump ahead message size bytes. Else I would wrap the next message size raw bytes into a RawMessage wrapper which stored the bytes and the size and is reintepreted when consumed.
+| Optimization Step | Throughput | Improvement |
+|-------------------|------------|-------------|
+| **1. Baseline (No Atomics)** | 10.66 M/s | - |
+| **2. Atomic Cursors** | 4.54 M/s | (Regression due to contention) |
+| **3. Cache Alignment** | 5.35 M/s | +17% |
+| **4. Acquire/Release Semantics** | 8.34 M/s | +56% |
+| **5. Cursor Caching** | 22.22 M/s | +166% |
+| **6. Power of 2 Buffer (Bitwise Mod)** | 34.31 M/s | +54% |
+| **7. Compiler Optimizations (-O3)** | **218.21 M/s** | **+536%** |
 
-# Step 3: Producer and Consumer
-Main thread creates the orderbook, parser, event queue, and atomic done flag. It then launches the consumer thread passing it reference to the orderbooks map, queue, and done flag. The main thread handles the input stream and packs the messages into the FIFO using the parser. The consumer gets the RawMessage from the event queue and checks the first byte of the message to learn the message type. It then reinterpret_casts the raw bytes into the correct message type and converts from network to host. It them add the order to the orderbook which performs the matching logic.
+*Note: Measurements taken on standard commodity hardware. "No Atomics" and "Atomic Cursors" steps contained data races and were for educational benchmarking only.*
 
-Each orderbook spawns its own background thread that runs at market close to prune good for day orders this could be improved to have a single handler at day end.
+---
 
-Note: ITCH data just provides market state so not all orderbook functionality is used here.
+## Features
+
+*   **NASDAQ ITCH 5.0 Parser:** Efficiently parses binary market data messages (Add Order, Order Executed, Order Cancel, Order Delete, Order Replace).
+*   **Lock-Free SPSC Queue:** Custom implementation using `std::atomic` with explicit memory ordering (`acquire`/`release`) and `std::hardware_destructive_interference_size` for cache line alignment to prevent false sharing.
+*   **Limit Order Book:** Full support for Price-Time priority matching, order modifications, and cancellations.
+*   **Modern C++20:**
+    *   `std::jthread` and `std::stop_token` for safe thread management.
+    *   `std::span` for zero-copy buffer views.
+    *   `std::atomic` for lock-free synchronization.
+    *   `[[no_unique_address]]` for allocator optimization.
+*   **Safety & Testing:**
+    *   Comprehensive Unit Tests using **Google Test**.
+    *   Performance benchmarks using **Google Benchmark**.
+    *   Automated builds with **Address**, **Thread**, **Memory**, and **Undefined Behavior** sanitizers.
+
+## Project Structure
+
+```text
+├── include/
+│   ├── ringbuffer.h       # Lock-free SPSC implementation
+│   ├── itchparser.h       # ITCH 5.0 protocol parser
+│   └── orderbook/         # Order Book logic and data structures
+├── src/
+│   ├── main.cpp           # Entry point: Thread setup and event loop
+│   └── orderbook/         # Order Book implementation
+├── tests/
+│   ├── ringbench.cpp      # Google Benchmark for Ring Buffer
+│   └── ringtest.cpp       # Google Test for Ring Buffer correctness
+├── itch/                  # ITCH 5.0 data files
+├── all_builds.sh          # Helper script for Release and Debug/Sanitizer builds
+└── conanfile.py           # Dependency management
+```
+
+## Getting Started
+
+### Prerequisites
+
+*   **C++20 Compiler** (GCC 11+, Clang 14+, MSVC 19.29+)
+*   **CMake** (3.23+)
+*   **Conan** (2.x) package manager
+*   **Ninja** build system (optional, but recommended)
+
+### Build Instructions
+
+The project includes a helper script `all_builds.sh` that compiles the project in **Release** mode and multiple **Debug** modes with different sanitizers.
+
+```bash
+# Make the script executable
+chmod +x all_builds.sh
+
+# Run the build script
+./all_builds.sh
+```
+
+This will generate:
+*   `build/Release/TradingEngine`: Optimized release binary.
+*   `build/Debug/TradingEngine_asan`: Debug binary with Address Sanitizer.
+*   `build/Debug/TradingEngine_tsan`: Debug binary with Thread Sanitizer.
+*   `build/Debug/TradingEngine_msan`: Debug binary with Memory Sanitizer.
+*   `build/Debug/TradingEngine_ubsan`: Debug binary with Undefined Behavior Sanitizer.
+
+### Running the Engine
+
+You need a NASDAQ ITCH 5.0 file to run the engine.
+
+```bash
+# Syntax: ./TradingEngine <path_to_itch_file>
+./build/Release/TradingEngine itch/ITCH50.txt
+```
+
+### Running Tests
+
+```bash
+cd build/Release
+ctest --output-on-failure
+```
+
+## Performance Details
+
+### Memory Layout
+The `RingBuffer` is designed to minimize cache coherency traffic between the producer and consumer cores.
+*   **Padding:** `push_cursor_` and `pop_cursor_` are aligned to `std::hardware_destructive_interference_size` (typically 64 bytes) to ensure they reside on separate cache lines.
+*   **Caching:** Local copies of the cursors (`cached_push_cursor_`, `cached_pop_cursor_`) are maintained to reduce the frequency of atomic loads.
+
+### Zero-Copy Parsing
+The parser casts raw byte sequences directly into message structs (`ITCH50::AddOrderMsg`, etc.) using `reinterpret_cast`. This avoids expensive memory copying. Networking order (Big Endian) to Host order (Little Endian) conversion is handled immediately upon processing.
