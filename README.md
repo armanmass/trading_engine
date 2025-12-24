@@ -47,14 +47,13 @@ The core of the engine's performance lies in the optimization of the SPSC FIFO q
 | Optimization Step | Throughput | Improvement |
 |-------------------|------------|-------------|
 | **1. Baseline (No Atomics)** | 10.66 M/s | - |
-| **2. Atomic Cursors** | 4.54 M/s | (Regression due to contention) |
+| **2. Atomic Cursors** | 4.54 M/s | (Regression due to atomic operation cost) |
 | **3. Cache Alignment** | 5.35 M/s | +17% |
 | **4. Acquire/Release Semantics** | 8.34 M/s | +56% |
 | **5. Cursor Caching** | 22.22 M/s | +166% |
 | **6. Power of 2 Buffer (Bitwise Mod)** | 34.31 M/s | +54% |
 | **7. Compiler Optimizations (-O3)** | **218.21 M/s** | **+536%** |
 
-*Note: Measurements taken on standard commodity hardware. "No Atomics" and "Atomic Cursors" steps contained data races and were for educational benchmarking only.*
 
 ---
 
